@@ -1,4 +1,4 @@
-pragma solidity ^0.4.25;
+pragma solidity ^0.4.24;
 
 // It's important to avoid vulnerabilities due to numeric overflow bugs
 // OpenZeppelin's SafeMath library, when used correctly, protects agains such bugs
@@ -23,9 +23,10 @@ contract FlightSuretyApp {
     uint8 private constant STATUS_CODE_LATE_WEATHER = 30;
     uint8 private constant STATUS_CODE_LATE_TECHNICAL = 40;
     uint8 private constant STATUS_CODE_LATE_OTHER = 50;
+    uint256 private constant REQUIRED_CONSENSUS_M = 4;
 
     address private contractOwner;          // Account used to deploy contract
-
+    FlightSuretyData flightSuretyData;
     struct Flight {
         bool isRegistered;
         uint8 statusCode;
@@ -50,7 +51,7 @@ contract FlightSuretyApp {
     modifier requireIsOperational() 
     {
          // Modify to call data contract's status
-        require(true, "Contract is currently not operational");  
+        require(flightSuretyData.isOperational(), "Contract is currently not operational");
         _;  // All modifiers require an "_" which indicates where the function body will be added
     }
 
@@ -63,6 +64,41 @@ contract FlightSuretyApp {
         _;
     }
 
+    /**
+    * @dev Modifier that requires that airline getting registered upto 4th is only registered by one of already registered airline.
+    */
+    modifier requireRegisterByExisting(string name,address airline)
+    {
+        if(flightSuretyData.getAirlineCount() < REQUIRED_CONSENSUS_M)
+        {
+            bool airlineExists = false;
+            for(uint i = 0; i<3 ; ++i){
+                if(flightSuretyData.getInitialAirlines(i) == msg.sender)
+                {
+                    airlineExists = true;
+                    break;
+                }
+            }
+            require(airlineExists,"Already registered airlines can only register a new airline.");
+            flightSuretyData.registerAirline(name,airline);
+        }
+        else
+        {
+            _;
+        }
+        
+    }
+
+    /**
+    * @dev Modifier that requires that airline getting registered upto 4th is only registered by one of already registered airline.
+    */
+    modifier requireAirlineConsensus(string name, address airline)
+    {
+        (bool success, uint256 votes) = registerAirline(name,airline);
+        require(success,"Duplicate votes for airline not allowed!");
+        require(votes > flightSuretyData.getAirlineCount().div(2),"50% registered and funded airline consensus not reached.");
+        _;
+    }
     /********************************************************************************************/
     /*                                       CONSTRUCTOR                                        */
     /********************************************************************************************/
@@ -73,10 +109,14 @@ contract FlightSuretyApp {
     */
     constructor
                                 (
+                                    address dataContract
                                 ) 
                                 public 
     {
         contractOwner = msg.sender;
+        flightSuretyData = FlightSuretyData(dataContract);
+        flightSuretyData.setConsensus_M(REQUIRED_CONSENSUS_M);// pass on to reset/set the consensus number;
+        flightSuretyData.registerAirline("AirIndia",msg.sender);
     }
 
     /********************************************************************************************/
@@ -85,12 +125,25 @@ contract FlightSuretyApp {
 
     function isOperational() 
                             public 
-                            pure 
+                            view
                             returns(bool) 
     {
-        return true;  // Modify to call data contract's status
+        return flightSuretyData.isOperational();  // Modify to call data contract's status
     }
 
+    /**
+    * @dev Sets contract operations on/off
+    *
+    * When operational mode is disabled, all write transactions except for this one will fail
+    */    
+    function setOperatingStatus
+                            (
+                                bool mode
+                            ) 
+                            internal
+    {
+        flightSuretyData.setOperatingStatus(mode);
+    }
     /********************************************************************************************/
     /*                                     SMART CONTRACT FUNCTIONS                             */
     /********************************************************************************************/
@@ -102,12 +155,24 @@ contract FlightSuretyApp {
     */   
     function registerAirline
                             (   
+                                string name,
+                                address airline
                             )
-                            external
-                            pure
-                            returns(bool success, uint256 votes)
+                            requireRegisterByExisting(name,airline)
+                            public
+                            returns(bool success, uint256 votes)    
     {
-        return (success, 0);
+        //code for multi party consensus.
+        // if here, 4 airlines have already been registered.
+        bytes32 voteHash = keccak256(abi.encodePacked(name,airline,msg.sender));
+        bytes32 voteCountHash = keccak256(abi.encodePacked(name,airline));
+        if(flightSuretyData.getAirlineVotes(voteHash) != 1)//this ensures same airline does not vote for another airline again.
+        {
+            flightSuretyData.setAirlineVotes(voteHash);
+            flightSuretyData.setAirlineVotesCount(voteCountHash);
+            return (true, flightSuretyData.getAirlineVotesCount(voteCountHash));
+        }
+        return (false,flightSuretyData.getAirlineVotesCount(voteCountHash));// this means, already voted address tried to registerAirline again.
     }
 
 
@@ -119,7 +184,6 @@ contract FlightSuretyApp {
                                 (
                                 )
                                 external
-                                pure
     {
 
     }
@@ -334,4 +398,17 @@ contract FlightSuretyApp {
 
 // endregion
 
-}   
+}
+
+contract FlightSuretyData{
+    function isOperational() public view returns(bool);
+    function setOperatingStatus(bool mode) external;
+    function registerAirline(string name,address airline) external;
+    function setConsensus_M(uint256 m) external;
+    function getInitialAirlines(uint256 i) external returns (address);
+    function getAirlineCount() external returns (uint256);
+    function getAirlineVotes(bytes32 key) external returns (uint256);
+    function getAirlineVotesCount(bytes32 key) external returns (uint256);
+    function setAirlineVotes(bytes32 key) external;
+    function setAirlineVotesCount(bytes32 key) external;
+}

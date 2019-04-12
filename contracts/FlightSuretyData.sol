@@ -1,4 +1,4 @@
-pragma solidity ^0.4.25;
+pragma solidity ^0.4.24;
 
 import "../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol";
 
@@ -11,6 +11,18 @@ contract FlightSuretyData {
 
     address private contractOwner;                                      // Account used to deploy contract
     bool private operational = true;                                    // Blocks all state changes throughout the contract if false
+    uint256 private REQUIRED_CONSENSUS_M = 4;//defaults to 4
+    struct Airline 
+    {
+        string name;
+        uint256 funds;
+        bool isFunded;
+    }
+    mapping(address => Airline) private registeredAirlines;
+    uint256 public airlineCount = 0;// count of airlines that are registered and funded.
+    address[] public initialAirlines = new address[](0);
+    mapping(bytes32 => uint256) public airlineVotes;// hash of name+airline+msg.sender => for tracking who already voted.
+    mapping(bytes32 => uint256) public airlineVotesCount;// hash of name+airline => for vote Counting
 
     /********************************************************************************************/
     /*                                       EVENT DEFINITIONS                                  */
@@ -56,10 +68,52 @@ contract FlightSuretyData {
         _;
     }
 
+    /**
+    * @dev Modifier that requires the funding amount is sufficient.
+    */
+    modifier requireEnoughFunding()
+    {
+        require(msg.value >= 1 ether, "Funding should be greater than 1 Ether");
+        _;
+    }
+
     /********************************************************************************************/
     /*                                       UTILITY FUNCTIONS                                  */
     /********************************************************************************************/
+    function getInitialAirlines(uint256 i) external returns (address)
+    {
+        return initialAirlines[i];
+    }
 
+    function getAirlineCount() external returns (uint256)
+    {
+        return airlineCount;
+    }
+
+    function getAirlineVotes(bytes32 key) external returns (uint256)
+    {
+        return airlineVotes[key];
+    }
+
+    function setAirlineVotes(bytes32 key) external
+    {
+        airlineVotes[key] = 1;
+    }
+
+    function getAirlineVotesCount(bytes32 key) external returns (uint256)
+    {
+        return airlineVotesCount[key];
+    }
+
+    function setAirlineVotesCount(bytes32 key) external
+    {
+        airlineVotesCount[key] += 1;
+    }
+
+    function setConsensus_M(uint256 m) external
+    {
+        REQUIRED_CONSENSUS_M = m;
+    }
     /**
     * @dev Get operating status of contract
     *
@@ -84,7 +138,6 @@ contract FlightSuretyData {
                                 bool mode
                             ) 
                             external
-                            requireContractOwner 
     {
         operational = mode;
     }
@@ -100,10 +153,13 @@ contract FlightSuretyData {
     */   
     function registerAirline
                             (   
+                                string name,
+                                address airline
                             )
                             external
-                            pure
+                            requireEnoughFunding()
     {
+        registeredAirlines[airline].name = name;
     }
 
 
@@ -149,12 +205,19 @@ contract FlightSuretyData {
     *      resulting in insurance payouts, the contract should be self-sustaining
     *
     */   
-    function fund
-                            (   
-                            )
-                            public
-                            payable
+    function fund()
+                  public
+                  payable
     {
+        uint256 val = msg.value;
+        contractOwner.transfer(val);
+        registeredAirlines[msg.sender].isFunded = true;
+        registeredAirlines[msg.sender].funds = val;
+        if(airlineCount < 4){
+            initialAirlines.push(msg.sender);
+        }
+
+        airlineCount++;
     }
 
     function getFlightKey
