@@ -89,16 +89,16 @@ contract FlightSuretyApp {
         
     }
 
-    /**
-    * @dev Modifier that requires that airline getting registered upto 4th is only registered by one of already registered airline.
-    */
-    modifier requireAirlineConsensus(string name, address airline)
-    {
-        (bool success, uint256 votes) = registerAirline(name,airline);
-        require(success,"Duplicate votes for airline not allowed!");
-        require(votes > flightSuretyData.getAirlineCount().div(2),"50% registered and funded airline consensus not reached.");
-        _;
-    }
+    // /**
+    // * @dev Modifier that requires that airline getting registered upto 4th is only registered by one of already registered airline.
+    // */
+    // modifier requireAirlineConsensus(string name, address airline)
+    // {
+    //     (bool success, uint256 votes) = registerAirline(name,airline);
+    //     require(success,"Duplicate votes for airline not allowed!");
+    //     require(votes > flightSuretyData.getAirlineCount().div(2),"50% registered and funded airline consensus not reached.");
+    //     _;
+    // }
     /********************************************************************************************/
     /*                                       CONSTRUCTOR                                        */
     /********************************************************************************************/
@@ -166,13 +166,23 @@ contract FlightSuretyApp {
         // if here, 4 airlines have already been registered.
         bytes32 voteHash = keccak256(abi.encodePacked(name,airline,msg.sender));
         bytes32 voteCountHash = keccak256(abi.encodePacked(name,airline));
+        success = false;// this means, already voted address tried to registerAirline again.
         if(flightSuretyData.getAirlineVotes(voteHash) != 1)//this ensures same airline does not vote for another airline again.
         {
             flightSuretyData.setAirlineVotes(voteHash);
             flightSuretyData.setAirlineVotesCount(voteCountHash);
-            return (true, flightSuretyData.getAirlineVotesCount(voteCountHash));
+            success = true;
         }
-        return (false,flightSuretyData.getAirlineVotesCount(voteCountHash));// this means, already voted address tried to registerAirline again.
+        require(success,"Duplicate votes for airline not allowed!");
+        votes = flightSuretyData.getAirlineVotesCount(voteCountHash);
+        if(votes > flightSuretyData.getAirlineCount().div(2)){
+            flightSuretyData.registerAirline(name,airline);
+            return (true, votes);
+        }
+        else{
+            return (false, votes);//voted, but not yet registered due to consensus not achieved.
+        }
+        
     }
 
 
@@ -182,10 +192,12 @@ contract FlightSuretyApp {
     */  
     function registerFlight
                                 (
+                                    string flight,
+                                    uint256 timestamp
                                 )
                                 external
     {
-
+        flightSuretyData.registerFlight(flight,timestamp);
     }
     
    /**
@@ -200,8 +212,8 @@ contract FlightSuretyApp {
                                     uint8 statusCode
                                 )
                                 internal
-                                pure
     {
+        flightSuretyData.processFlightStatus(airline,flight,timestamp,statusCode);
     }
 
 
@@ -411,4 +423,6 @@ contract FlightSuretyData{
     function getAirlineVotesCount(bytes32 key) external returns (uint256);
     function setAirlineVotes(bytes32 key) external;
     function setAirlineVotesCount(bytes32 key) external;
+    function registerFlight(string flight, uint256 time) external;
+    function processFlightStatus(address airline,string flight,uint256 timestamp,uint8 statusCode) external;
 }

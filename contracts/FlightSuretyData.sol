@@ -1,4 +1,5 @@
 pragma solidity ^0.4.24;
+pragma experimental ABIEncoderV2;
 
 import "../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol";
 
@@ -18,11 +19,25 @@ contract FlightSuretyData {
         uint256 funds;
         bool isFunded;
     }
+    
+    struct Flight
+    {
+        address airline;
+        string flight;
+        uint256 timestamp;
+        bool isRegistered;
+        uint8 statusCode;
+    }
+
+    mapping(address => bytes32) private registeredFlight;//user to registered flight key mapping
+    mapping(bytes32 => Flight) private flights;// flights operating in the system.
+    mapping(string => address) private airlineNameToAddress;
     mapping(address => Airline) private registeredAirlines;
     uint256 public airlineCount = 0;// count of airlines that are registered and funded.
     address[] public initialAirlines = new address[](0);
     mapping(bytes32 => uint256) public airlineVotes;// hash of name+airline+msg.sender => for tracking who already voted.
     mapping(bytes32 => uint256) public airlineVotesCount;// hash of name+airline => for vote Counting
+    uint256 private constant init_fund_price = 10 ether;
 
     /********************************************************************************************/
     /*                                       EVENT DEFINITIONS                                  */
@@ -69,12 +84,19 @@ contract FlightSuretyData {
     }
 
     /**
-    * @dev Modifier that requires the funding amount is sufficient.
+    * @dev Modifier that requires the funding amount is sufficient, also checks if airline can take part in transactions.
     */
     modifier requireEnoughFunding()
     {
-        require(msg.value >= 1 ether, "Funding should be greater than 1 Ether");
-        _;
+        if(registeredAirlines[msg.sender].isFunded)
+        {
+            _;
+        }
+        else
+        {
+            require(msg.value >= init_fund_price, "Initial funding not sufficient.");
+            _;
+        }
     }
 
     /********************************************************************************************/
@@ -110,7 +132,46 @@ contract FlightSuretyData {
         airlineVotesCount[key] += 1;
     }
 
-    function setConsensus_M(uint256 m) external
+    function getRegisteredFlight(address user) external returns (bytes32)
+    {
+        return registeredFlight[user];
+    }
+
+    function getFlight(string flight, address airline, uint256 timestamp) external returns (Flight)
+    {
+        bytes32 key = keccak256(abi.encodePacked(airline, flight, timestamp));
+        return flights[key];
+    }
+    
+    function registerFlight(string flight, uint256 time) external
+    {
+        require(flights[registeredFlight[msg.sender]].isRegistered == true,"Flight already registered for caller.");
+        bytes32 key = keccak256(abi.encodePacked(airlineNameToAddress[flight], flight, time));
+        flights[key] = Flight({
+                                        isRegistered: true,
+                                        statusCode: 0,//STATUS_CODE_UNKNOWN
+                                        flight: flight,
+                                        timestamp: time,
+                                        airline: airlineNameToAddress[flight]
+                                    });
+        registeredFlight[msg.sender] = key;
+        
+    }
+
+    function processFlightStatus
+                                (
+                                    address airline,
+                                    string flight,
+                                    uint256 timestamp,
+                                    uint8 statusCode
+                                )
+                                external
+    {
+        bytes32 key = keccak256(abi.encodePacked(airline, flight, timestamp));
+        flights[key].statusCode = statusCode;
+    }
+
+    function setConsensus_M(uint256 m) external requireIsOperational()
     {
         REQUIRED_CONSENSUS_M = m;
     }
@@ -157,9 +218,10 @@ contract FlightSuretyData {
                                 address airline
                             )
                             external
-                            requireEnoughFunding()
+                            requireIsOperational()
     {
         registeredAirlines[airline].name = name;
+        airlineNameToAddress[name] = airline;
     }
 
 
@@ -172,6 +234,7 @@ contract FlightSuretyData {
                             )
                             external
                             payable
+                            requireIsOperational()
     {
 
     }
@@ -183,7 +246,7 @@ contract FlightSuretyData {
                                 (
                                 )
                                 external
-                                pure
+                                requireIsOperational()
     {
     }
     
@@ -196,7 +259,7 @@ contract FlightSuretyData {
                             (
                             )
                             external
-                            pure
+                            requireIsOperational()
     {
     }
 
@@ -208,6 +271,8 @@ contract FlightSuretyData {
     function fund()
                   public
                   payable
+                  requireIsOperational()
+                  requireEnoughFunding()
     {
         uint256 val = msg.value;
         contractOwner.transfer(val);
@@ -240,6 +305,7 @@ contract FlightSuretyData {
     function() 
                             external 
                             payable 
+                            requireIsOperational()
     {
         fund();
     }
