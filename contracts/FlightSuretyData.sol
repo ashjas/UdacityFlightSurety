@@ -28,16 +28,57 @@ contract FlightSuretyData {
         bool isRegistered;
         uint8 statusCode;
     }
-
+    mapping(address => bool) private authorized;
     mapping(address => bytes32) private registeredFlight;//user to registered flight key mapping
     mapping(bytes32 => Flight) private flights;// flights operating in the system.
-    mapping(string => address) private airlineNameToAddress;
+    mapping(string => address) private flightName2AirlineAddress;
     mapping(address => Airline) private registeredAirlines;
-    uint256 public airlineCount = 0;// count of airlines that are registered and funded.
-    address[] public initialAirlines = new address[](0);
     mapping(bytes32 => uint256) public airlineVotes;// hash of name+airline+msg.sender => for tracking who already voted.
     mapping(bytes32 => uint256) public airlineVotesCount;// hash of name+airline => for vote Counting
+
+    struct InsuredFlightCustomer
+    {
+        address customer;
+        uint256 insuranceAmount;
+    }
+    struct InsuredFlightCustomers
+    {
+        InsuredFlightCustomer[] flightCustomers;// index is derived from hash of InsuredCustomerIndexHash[customerAddress+flightName+timestamp] => index.
+        bool markRefund;
+    }
+    struct InsuredFlights
+    {
+        InsuredFlightCustomers[] insuredFlightDetails;// index is derived from hash of InsuredFlightIndexHash[flightName+timestamp] => index.
+    }    
+    mapping(address => InsuredFlights) private insuredLedger;// hash of airline address to mapping of insureeFunds.
+
+    uint256 insuredFlightCounter = 0;
+    uint256 insuredFlightCustomerCounter = 0;
+    mapping(bytes32 => uint256) private InsuredFlightIndexHash;// needs to be updated when new flight is inserted.
+    mapping(bytes32 => uint256) private InsuredCustomerIndexHash;// needs to be update when new customer is added.
+    address airline; address flightAddress; address customerAddress;uint256 timestamp;string flightName;
+    InsuredFlights insuredFlights = insuredLedger[airline];
+    // uint256 flightIdx = InsuredFlightIndexHash[keccak256(abi.encodePacked(flightName,timestamp))];
+    // uint256 customerIdx = InsuredCustomerIndexHash[keccak256(abi.encodePacked(customerAddress,flightName,timestamp))];
+    // address customer = insuredFlights.insuredFlightDetails[flightIdx].flightCustomers[customerIdx].customer;
+    // uint256 customerInsuranceAmount = insuredFlights.insuredFlightDetails[flightIdx].flightCustomers[customerIdx].insuranceAmount;
+    function addInsuredCustomer(address airline, string flightName,uint256 timestamp, address customerAddress, uint256 payAmount ) external payable requireIsOperational()
+    {
+        // update the indexHashes..
+        InsuredFlightIndexHash[keccak256(abi.encodePacked(flightName,timestamp))] = insuredFlightCounter++;
+        InsuredCustomerIndexHash[keccak256(abi.encodePacked(customerAddress,flightName,timestamp))] = insuredFlightCustomerCounter++;
+        InsuredFlightCustomer memory ifc = InsuredFlightCustomer({    
+            customer : customerAddress,
+            insuranceAmount: payAmount
+        });
+        contractOwner.transfer(payAmount);
+        insuredLedger[airline].insuredFlightDetails[insuredFlightCounter - 1].flightCustomers[insuredFlightCustomerCounter - 1] = ifc;
+        insuredLedger[airline].insuredFlightDetails[insuredFlightCounter - 1].markRefund = false;//set this to indicate, no refund has been initiated yet.
+    }
+    
     uint256 private constant init_fund_price = 10 ether;
+    uint256 public airlineCount = 0;// count of airlines that are registered and funded.
+    address[] public initialAirlines = new address[](0);
 
     /********************************************************************************************/
     /*                                       EVENT DEFINITIONS                                  */
@@ -102,60 +143,70 @@ contract FlightSuretyData {
     /********************************************************************************************/
     /*                                       UTILITY FUNCTIONS                                  */
     /********************************************************************************************/
-    function getInitialAirlines(uint256 i) external returns (address)
+
+    function authorizeCaller(address caller)
+    {
+        authorized[caller] = true;
+    }
+
+    function isAuthorized(address caller) returns (bool)
+    {
+        return authorized[caller];
+    }
+
+    function getInitialAirlines(uint256 i) requireIsOperational() external returns (address)
     {
         return initialAirlines[i];
     }
 
-    function getAirlineCount() external returns (uint256)
+    function getAirlineCount() requireIsOperational() external returns (uint256)
     {
         return airlineCount;
     }
 
-    function getAirlineVotes(bytes32 key) external returns (uint256)
+    function getAirlineVotes(bytes32 key) requireIsOperational() external returns (uint256)
     {
         return airlineVotes[key];
     }
 
-    function setAirlineVotes(bytes32 key) external
+    function setAirlineVotes(bytes32 key) requireIsOperational() external
     {
         airlineVotes[key] = 1;
     }
 
-    function getAirlineVotesCount(bytes32 key) external returns (uint256)
+    function getAirlineVotesCount(bytes32 key) requireIsOperational() external returns (uint256)
     {
         return airlineVotesCount[key];
     }
 
-    function setAirlineVotesCount(bytes32 key) external
+    function setAirlineVotesCount(bytes32 key) requireIsOperational() external
     {
         airlineVotesCount[key] += 1;
     }
 
-    function getRegisteredFlight(address user) external returns (bytes32)
+    function getRegisteredFlight(address user) requireIsOperational() external returns (bytes32)
     {
         return registeredFlight[user];
     }
 
-    function getFlight(string flight, address airline, uint256 timestamp) external returns (Flight)
+    function getFlight(string flight, address airline, uint256 timestamp) requireIsOperational() external returns (Flight)
     {
         bytes32 key = keccak256(abi.encodePacked(airline, flight, timestamp));
         return flights[key];
     }
     
-    function registerFlight(string flight, uint256 time) external
+    // this function registers a flight in the data contract.
+    function registerFlight(string airlineName,string flight, uint256 time) requireIsOperational() external
     {
-        require(flights[registeredFlight[msg.sender]].isRegistered == true,"Flight already registered for caller.");
-        bytes32 key = keccak256(abi.encodePacked(airlineNameToAddress[flight], flight, time));
+        bytes32 key = keccak256(abi.encodePacked(flightName2AirlineAddress[airlineName], flight, time));//TODO: flightName2Airline is actually airlineName2AirlineAddress.
+        require(flights[key].isRegistered == false,"Flight already registered.");
         flights[key] = Flight({
                                         isRegistered: true,
                                         statusCode: 0,//STATUS_CODE_UNKNOWN
                                         flight: flight,
                                         timestamp: time,
-                                        airline: airlineNameToAddress[flight]
-                                    });
-        registeredFlight[msg.sender] = key;
-        
+                                        airline: flightName2AirlineAddress[airlineName]
+                                    });        
     }
 
     function processFlightStatus
@@ -165,6 +216,7 @@ contract FlightSuretyData {
                                     uint256 timestamp,
                                     uint8 statusCode
                                 )
+                                requireIsOperational()
                                 external
     {
         bytes32 key = keccak256(abi.encodePacked(airline, flight, timestamp));
@@ -200,6 +252,7 @@ contract FlightSuretyData {
                             ) 
                             external
     {
+        require(operational != mode,"Operation mode requested already set.");
         operational = mode;
     }
 
@@ -217,26 +270,31 @@ contract FlightSuretyData {
                                 string name,
                                 address airline
                             )
-                            external
                             requireIsOperational()
+                            external
     {
         registeredAirlines[airline].name = name;
-        airlineNameToAddress[name] = airline;
+        flightName2AirlineAddress[name] = airline;
     }
-
 
    /**
     * @dev Buy insurance for a flight
     *
     */   
     function buy
-                            (                             
+                            (   string airlineName,
+                                string flightName,
+                                uint256 timestamp,
+                                address customerAddress,
+                                uint256 payAmount
                             )
+                            requireIsOperational()
                             external
                             payable
-                            requireIsOperational()
     {
-
+        bytes32 key = keccak256(abi.encodePacked(flightName2AirlineAddress[airlineName], flightName, timestamp));
+        require(flights[key].isRegistered == true,"Flight not registered yet");
+        this.addInsuredCustomer(flightName2AirlineAddress[airlineName],flightName,timestamp,customerAddress,payAmount);
     }
 
     /**
@@ -244,10 +302,15 @@ contract FlightSuretyData {
     */
     function creditInsurees
                                 (
+                                    address airline,
+                                    string flightName,
+                                    uint256 timestamp
                                 )
-                                external
                                 requireIsOperational()
+                                external
     {
+        uint256 delayedFlightIdx = InsuredFlightIndexHash[keccak256(abi.encodePacked(flightName,timestamp))];
+        insuredLedger[airline].insuredFlightDetails[delayedFlightIdx - 1].markRefund = true;
     }
     
 
@@ -257,10 +320,23 @@ contract FlightSuretyData {
     */
     function pay
                             (
+                                string airlineName,
+                                string flightName,
+                                uint256 timestamp
                             )
-                            external
                             requireIsOperational()
+                            external payable
     {
+        address customer = msg.sender;
+        uint256 delayedFlightIdx = InsuredFlightIndexHash[keccak256(abi.encodePacked(flightName,timestamp))];
+        uint256 customerIdx = InsuredCustomerIndexHash[keccak256(abi.encodePacked(customer,flightName,timestamp))];
+        if(insuredLedger[airline].insuredFlightDetails[delayedFlightIdx - 1].markRefund == true)
+        {
+            uint256 refundAmount = insuredLedger[airline].insuredFlightDetails[delayedFlightIdx - 1].flightCustomers[customerIdx - 1].insuranceAmount;
+            refundAmount = refundAmount.mul(3).div(2);
+            insuredLedger[airline].insuredFlightDetails[delayedFlightIdx - 1].flightCustomers[customerIdx - 1].insuranceAmount = 0;//remove the credit.
+            customer.transfer(refundAmount);
+        }
     }
 
    /**
@@ -291,7 +367,7 @@ contract FlightSuretyData {
                             string memory flight,
                             uint256 timestamp
                         )
-                        pure
+                        requireIsOperational()
                         internal
                         returns(bytes32) 
     {

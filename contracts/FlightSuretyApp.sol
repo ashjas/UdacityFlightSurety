@@ -117,6 +117,7 @@ contract FlightSuretyApp {
         flightSuretyData = FlightSuretyData(dataContract);
         flightSuretyData.setConsensus_M(REQUIRED_CONSENSUS_M);// pass on to reset/set the consensus number;
         flightSuretyData.registerAirline("AirIndia",msg.sender);
+        flightSuretyData.fund();
     }
 
     /********************************************************************************************/
@@ -140,6 +141,7 @@ contract FlightSuretyApp {
                             (
                                 bool mode
                             ) 
+                            requireContractOwner()
                             internal
     {
         flightSuretyData.setOperatingStatus(mode);
@@ -158,6 +160,7 @@ contract FlightSuretyApp {
                                 string name,
                                 address airline
                             )
+                            requireIsOperational()
                             requireRegisterByExisting(name,airline)
                             public
                             returns(bool success, uint256 votes)    
@@ -192,14 +195,22 @@ contract FlightSuretyApp {
     */  
     function registerFlight
                                 (
+                                    string airlineName,
                                     string flight,
                                     uint256 timestamp
                                 )
+                                requireIsOperational()
                                 external
     {
-        flightSuretyData.registerFlight(flight,timestamp);
+        flightSuretyData.registerFlight(airlineName,flight,timestamp);
     }
-    
+
+    function buy(string airlineName,string flightName, uint256 timeStamp) requireIsOperational() payable public
+    {
+        require(msg.value <= 1 ether,"Insurance purchase amount should be less than 1 ether.");
+        flightSuretyData.buy(airlineName,flightName,timeStamp,msg.sender,msg.value);
+    }
+
    /**
     * @dev Called after oracle has updated flight status
     *
@@ -207,15 +218,24 @@ contract FlightSuretyApp {
     function processFlightStatus
                                 (
                                     address airline,
-                                    string memory flight,
+                                    string memory flightName,
                                     uint256 timestamp,
                                     uint8 statusCode
                                 )
+                                requireIsOperational()
                                 internal
     {
-        flightSuretyData.processFlightStatus(airline,flight,timestamp,statusCode);
+        flightSuretyData.processFlightStatus(airline,flightName,timestamp,statusCode);
+        if(statusCode == STATUS_CODE_LATE_AIRLINE)
+        {
+            flightSuretyData.creditInsurees(airline,flightName, timestamp);
+        }
     }
 
+    function withdrawOnDelay(string memory airlineName,string memory flightName,uint256 timestamp) requireIsOperational() public payable
+    {
+        flightSuretyData.pay(airlineName,flightName,timestamp);
+    }
 
     // Generate a request for oracles to fetch flight information
     function fetchFlightStatus
@@ -224,6 +244,7 @@ contract FlightSuretyApp {
                             string flight,
                             uint256 timestamp                            
                         )
+                        requireIsOperational()
                         external
     {
         uint8 index = getRandomIndex(msg.sender);
@@ -287,6 +308,7 @@ contract FlightSuretyApp {
     function registerOracle
                             (
                             )
+                            requireIsOperational()
                             external
                             payable
     {
@@ -306,6 +328,7 @@ contract FlightSuretyApp {
                             )
                             view
                             external
+                            requireIsOperational()
                             returns(uint8[3])
     {
         require(oracles[msg.sender].isRegistered, "Not registered as an oracle");
@@ -328,6 +351,7 @@ contract FlightSuretyApp {
                             uint256 timestamp,
                             uint8 statusCode
                         )
+                        requireIsOperational()
                         external
     {
         require((oracles[msg.sender].indexes[0] == index) || (oracles[msg.sender].indexes[1] == index) || (oracles[msg.sender].indexes[2] == index), "Index does not match oracle request");
@@ -357,7 +381,7 @@ contract FlightSuretyApp {
                             string flight,
                             uint256 timestamp
                         )
-                        pure
+                        requireIsOperational()
                         internal
                         returns(bytes32) 
     {
@@ -369,6 +393,7 @@ contract FlightSuretyApp {
                             (                       
                                 address account         
                             )
+                            requireIsOperational()
                             internal
                             returns(uint8[3])
     {
@@ -393,6 +418,7 @@ contract FlightSuretyApp {
                             (
                                 address account
                             )
+                            requireIsOperational()
                             internal
                             returns (uint8)
     {
@@ -423,6 +449,10 @@ contract FlightSuretyData{
     function getAirlineVotesCount(bytes32 key) external returns (uint256);
     function setAirlineVotes(bytes32 key) external;
     function setAirlineVotesCount(bytes32 key) external;
-    function registerFlight(string flight, uint256 time) external;
+    function registerFlight(string airlineName,string flight, uint256 time) external;
     function processFlightStatus(address airline,string flight,uint256 timestamp,uint8 statusCode) external;
+    function buy(string airlineName,string flightName,uint256 timestamp,address customer,uint256 payAmount) external payable;
+    function creditInsurees(address airline,string flightName,uint256 timestamp) external;
+    function pay(string airlineName,string flightName,uint256 timestamp) external;
+    function fund() public payable;
 }
