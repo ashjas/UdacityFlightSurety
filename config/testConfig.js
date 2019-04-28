@@ -26,7 +26,7 @@ var Config = async function(accounts) {
 
     let flightSuretyData = await FlightSuretyData.new();
     //console.log("flightsuretyData: " + flightSuretyData);
-    let flightSuretyApp = await FlightSuretyApp.new(0);
+    let flightSuretyApp = await FlightSuretyApp.new(flightSuretyData.address);
 
     
     return {

@@ -11,6 +11,7 @@ contract FlightSuretyData {
     /********************************************************************************************/
 
     address private contractOwner;                                      // Account used to deploy contract
+    address private appContractOwner;
     bool private operational = true;                                    // Blocks all state changes throughout the contract if false
     uint256 private REQUIRED_CONSENSUS_M = 4;//defaults to 4
     struct Airline 
@@ -56,8 +57,8 @@ contract FlightSuretyData {
     uint256 insuredFlightCustomerCounter = 0;
     mapping(bytes32 => uint256) private InsuredFlightIndexHash;// needs to be updated when new flight is inserted.
     mapping(bytes32 => uint256) private InsuredCustomerIndexHash;// needs to be update when new customer is added.
-    address airline; address flightAddress; address customerAddress;uint256 timestamp;string flightName;
-    InsuredFlights insuredFlights = insuredLedger[airline];
+    //address airline; address flightAddress; address customerAddress;uint256 timestamp;string flightName;
+    //InsuredFlights insuredFlights = insuredLedger[airline];
     // uint256 flightIdx = InsuredFlightIndexHash[keccak256(abi.encodePacked(flightName,timestamp))];
     // uint256 customerIdx = InsuredCustomerIndexHash[keccak256(abi.encodePacked(customerAddress,flightName,timestamp))];
     // address customer = insuredFlights.insuredFlightDetails[flightIdx].flightCustomers[customerIdx].customer;
@@ -140,31 +141,35 @@ contract FlightSuretyData {
         }
     }
 
+
     /********************************************************************************************/
     /*                                       UTILITY FUNCTIONS                                  */
     /********************************************************************************************/
-
-    function authorizeCaller(address caller)
+    function setAppContractOwner(address appAddress) public
+    {
+        appContractOwner = appAddress;
+    }
+    function authorizeCaller(address caller) public
     {
         authorized[caller] = true;
     }
 
-    function isAuthorized(address caller) returns (bool)
+    function isAuthorized(address caller) public view returns (bool)
     {
         return authorized[caller];
     }
 
-    function getInitialAirlines(uint256 i) requireIsOperational() external returns (address)
+    function getInitialAirlines(uint256 i) requireIsOperational() external view returns (address)
     {
         return initialAirlines[i];
     }
 
-    function getAirlineCount() requireIsOperational() external returns (uint256)
+    function getAirlineCount() requireIsOperational() external view returns (uint256)
     {
         return airlineCount;
     }
 
-    function getAirlineVotes(bytes32 key) requireIsOperational() external returns (uint256)
+    function getAirlineVotes(bytes32 key) requireIsOperational() external view returns (uint256)
     {
         return airlineVotes[key];
     }
@@ -174,7 +179,7 @@ contract FlightSuretyData {
         airlineVotes[key] = 1;
     }
 
-    function getAirlineVotesCount(bytes32 key) requireIsOperational() external returns (uint256)
+    function getAirlineVotesCount(bytes32 key) requireIsOperational() external view returns (uint256)
     {
         return airlineVotesCount[key];
     }
@@ -184,12 +189,12 @@ contract FlightSuretyData {
         airlineVotesCount[key] += 1;
     }
 
-    function getRegisteredFlight(address user) requireIsOperational() external returns (bytes32)
+    function getRegisteredFlight(address user) requireIsOperational() external view returns (bytes32)
     {
         return registeredFlight[user];
     }
 
-    function getFlight(string flight, address airline, uint256 timestamp) requireIsOperational() external returns (Flight)
+    function getFlight(string flight, address airline, uint256 timestamp) requireIsOperational() external view returns (Flight)
     {
         bytes32 key = keccak256(abi.encodePacked(airline, flight, timestamp));
         return flights[key];
@@ -252,7 +257,8 @@ contract FlightSuretyData {
                             ) 
                             external
     {
-        require(operational != mode,"Operation mode requested already set.");
+        require(msg.sender == appContractOwner);
+        //require(operational != mode,"Operation mode requested already set.");
         operational = mode;
     }
 
@@ -330,6 +336,7 @@ contract FlightSuretyData {
         address customer = msg.sender;
         uint256 delayedFlightIdx = InsuredFlightIndexHash[keccak256(abi.encodePacked(flightName,timestamp))];
         uint256 customerIdx = InsuredCustomerIndexHash[keccak256(abi.encodePacked(customer,flightName,timestamp))];
+        address airline = flightName2AirlineAddress[airlineName];
         if(insuredLedger[airline].insuredFlightDetails[delayedFlightIdx - 1].markRefund == true)
         {
             uint256 refundAmount = insuredLedger[airline].insuredFlightDetails[delayedFlightIdx - 1].flightCustomers[customerIdx - 1].insuranceAmount;
@@ -369,6 +376,7 @@ contract FlightSuretyData {
                         )
                         requireIsOperational()
                         internal
+                        view
                         returns(bytes32) 
     {
         return keccak256(abi.encodePacked(airline, flight, timestamp));

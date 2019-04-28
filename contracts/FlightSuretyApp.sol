@@ -117,9 +117,15 @@ contract FlightSuretyApp {
         flightSuretyData = FlightSuretyData(dataContract);
         flightSuretyData.setConsensus_M(REQUIRED_CONSENSUS_M);// pass on to reset/set the consensus number;
         flightSuretyData.registerAirline("AirIndia",msg.sender);
-        flightSuretyData.fund();
+        flightSuretyData.setAppContractOwner(contractOwner);
+        //flightSuretyData.fund();
     }
 
+    function fund() requireIsOperational() external payable
+    {
+        //flightSuretyData.fund.value(msg.value)(msg.sender);
+        flightSuretyData.fund();
+    }
     /********************************************************************************************/
     /*                                       UTILITY FUNCTIONS                                  */
     /********************************************************************************************/
@@ -383,6 +389,7 @@ contract FlightSuretyApp {
                         )
                         requireIsOperational()
                         internal
+                        view
                         returns(bytes32) 
     {
         return keccak256(abi.encodePacked(airline, flight, timestamp));
@@ -455,4 +462,5 @@ contract FlightSuretyData{
     function creditInsurees(address airline,string flightName,uint256 timestamp) external;
     function pay(string airlineName,string flightName,uint256 timestamp) external;
     function fund() public payable;
+    function setAppContractOwner(address) public;
 }
