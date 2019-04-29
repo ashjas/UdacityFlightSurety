@@ -120,42 +120,74 @@ contract('Flight Surety Tests', async (accounts) => {
 
   });
 
-  it('(airline) Second airline can be Queued by already registered Airline.', async () => {
+  // it('(airline) Second airline can be Queued by already registered Airline.', async () => {
     
-    // ARRANGE
-    let secondAirline = accounts[1];
+  //   // ARRANGE
+  //   let secondAirline = accounts[1];
 
-    // ACT
-    try {
-      await config.flightSuretyApp.registerAirline("AirIndia2",secondAirline, {from: config.owner});
-    }
-    catch(e) {
-      assert.equal(false,true,"Second airline cant register itself.");
-    }
-    let result = await config.flightSuretyData.isAirlineQueued.call(secondAirline); 
+  //   // ACT
+  //   try {
+  //     await config.flightSuretyApp.registerAirline("AirIndia2",secondAirline, {from: config.owner});
+  //   }
+  //   catch(e) {
+  //     assert.equal(false,true,"Second airline cant register itself.");
+  //   }
+  //   let result = await config.flightSuretyData.isAirlineQueued.call(secondAirline); 
 
-    // ASSERT
-    assert.equal("AirIndia2", result, "2nd Airline Queued by the owner.");
+  //   // ASSERT
+  //   assert.equal("AirIndia2", result, "2nd Airline Queued by the owner.");
 
-  });
+  // });
 
-  it('(airline) Fund the Second airline', async () => {
+  it('(airline) Register & Fund the 2nd,3rd,4th airlines', async () => {
     
      // ARRANGE
-     let secondAirline = accounts[2];
+     let airline2 = accounts[1];
+     let airline3 = accounts[2];
+     let airline4 = accounts[3];
 
      // ACT
      try {
-         await config.flightSuretyData.fund({from: secondAirline,value: Web3.utils.toWei('10', 'ether')});
+          //register and fund 2nd
+          await config.flightSuretyApp.registerAirline("AirIndia2",airline2, {from: config.owner});
+          await config.flightSuretyData.fund({from: airline2,value: Web3.utils.toWei('10', 'ether')});
+          //register and fund 3rd
+          await config.flightSuretyApp.registerAirline("AirIndia3",airline3, {from: airline2});
+          await config.flightSuretyData.fund({from: airline3,value: Web3.utils.toWei('10', 'ether')});
+          //register and fund 4th
+          await config.flightSuretyApp.registerAirline("AirIndia4",airline4, {from: airline3});
+          await config.flightSuretyData.fund({from: airline4,value: Web3.utils.toWei('10', 'ether')});
      }
      catch(e) {
        assert.equal(false,true,e.message);
      }
-     let result = await config.flightSuretyData.isAirlineRegistered.call(secondAirline); 
- 
-     // ASSERT
-     assert.equal(result, true, "Second Airline should be able to fund itself.");
+     let result = await config.flightSuretyData.isAirlineRegistered.call(airline2); 
+     assert.equal(result, true, "Airline2 should be able to register.");
+     
+     result = await config.flightSuretyData.isAirlineRegistered.call(airline3); 
+     assert.equal(result, true, "Airline3 should be able to register.");
+
+     result = await config.flightSuretyData.isAirlineRegistered.call(airline4); 
+     assert.equal(result, true, "Airline4 should be able to register.");
   });
+
+  it('(airline) Register & Fund the 5th airline without consensus', async () => {
+    
+    // ARRANGE
+    let airline4 = accounts[3];
+    let airline5 = accounts[4];
+
+    // ACT
+    try {
+         //register and fund 5th.. should error out..
+         await config.flightSuretyApp.registerAirline("AirIndia5",airline5, {from: airline4});
+         await config.flightSuretyData.fund({from: airline5,value: Web3.utils.toWei('10', 'ether')});
+    }
+    catch(e) {
+      //assert.equal(false,true,e.message);
+    }
+    assert.equal(false,true,"5th Airline registered by existing airlines!");
+ });
  
 
 });

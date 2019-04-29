@@ -4,6 +4,12 @@ var mnemonic = "hood outer advance century enter marriage symbol acquire access 
 module.exports = {
   networks: {
     development: {
+      host: "127.0.0.1",
+      port: 8545,
+      network_id: "*",
+      gas: 6721975
+    },
+    developmentOld: {
       provider: function() {
         return new HDWalletProvider(mnemonic, "http://127.0.0.1:8545/", 0, 50);
       },
