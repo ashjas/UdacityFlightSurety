@@ -145,6 +145,19 @@ contract FlightSuretyData {
     /********************************************************************************************/
     /*                                       UTILITY FUNCTIONS                                  */
     /********************************************************************************************/
+    function isAirlineRegistered(address airline) public view returns (bool)
+    {
+        if(registeredAirlines[airline].isFunded)
+            return true;
+        return false;
+    }
+    function isAirlineQueued(address airline) public view returns (string)
+    {
+        //if(registeredAirlines[airline].name == "AirIndia")
+          //  return true;
+        //return false;
+        return registeredAirlines[airline].name;
+    }
     function setAppContractOwner(address appAddress) public
     {
         appContractOwner = appAddress;

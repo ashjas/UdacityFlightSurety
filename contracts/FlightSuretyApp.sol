@@ -69,6 +69,7 @@ contract FlightSuretyApp {
     */
     modifier requireRegisterByExisting(string name,address airline)
     {
+        bool success = false;
         if(flightSuretyData.getAirlineCount() < REQUIRED_CONSENSUS_M)
         {
             bool airlineExists = false;
@@ -79,14 +80,15 @@ contract FlightSuretyApp {
                     break;
                 }
             }
-            require(airlineExists,"Already registered airlines can only register a new airline.");
+            require(airlineExists,"Already registered and funded airlines can only register a new airline.");
             flightSuretyData.registerAirline(name,airline);
+            success = true;
         }
         else
         {
-            _;
+            require(success,"Failed to Register Airline");
         }
-        
+        _;        
     }
 
     // /**
@@ -118,12 +120,14 @@ contract FlightSuretyApp {
         flightSuretyData.setConsensus_M(REQUIRED_CONSENSUS_M);// pass on to reset/set the consensus number;
         flightSuretyData.registerAirline("AirIndia",msg.sender);
         flightSuretyData.setAppContractOwner(contractOwner);
+        //address firstAirline = "0x857c4e76174837b6feb808d1f2312b2b107a612b";// accounts[1]
+        //flightSuretyData.authorizeCaller(firstAirline);
         //flightSuretyData.fund();
     }
 
     function fund() requireIsOperational() external payable
     {
-        //flightSuretyData.fund.value(msg.value)(msg.sender);
+        //flightSuretyData.fund.value(msg.value);
         flightSuretyData.fund();
     }
     /********************************************************************************************/
