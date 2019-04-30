@@ -86,9 +86,8 @@ contract FlightSuretyApp {
         }
         else
         {
-            require(success,"Failed to Register Airline");
+            _;    
         }
-        _;        
     }
 
     // /**
@@ -173,32 +172,33 @@ contract FlightSuretyApp {
                             requireIsOperational()
                             requireRegisterByExisting(name,airline)
                             public
-                            returns(bool success, uint256 votes)    
+                            //returns(bool success)    
     {
         //code for multi party consensus.
         // if here, 4 airlines have already been registered.
-        bytes32 voteHash = keccak256(abi.encodePacked(name,airline,msg.sender));
+        bytes32 airlineVotedKey = keccak256(abi.encodePacked(name,airline,msg.sender));
         bytes32 voteCountHash = keccak256(abi.encodePacked(name,airline));
-        success = false;// this means, already voted address tried to registerAirline again.
-        if(flightSuretyData.getAirlineVotes(voteHash) != 1)//this ensures same airline does not vote for another airline again.
+        bool duplicate = true;// this means, already voted address tried to registerAirline again.
+        if(flightSuretyData.getAirlineVotes(airlineVotedKey) == 0)//this ensures same airline does not vote for another airline again.
         {
-            flightSuretyData.setAirlineVotes(voteHash);
+            flightSuretyData.setAirlineVotes(airlineVotedKey);
             flightSuretyData.setAirlineVotesCount(voteCountHash);
-            success = true;
+            duplicate = false;
         }
-        require(success,"Duplicate votes for airline not allowed!");
-        votes = flightSuretyData.getAirlineVotesCount(voteCountHash);
-        if(votes > flightSuretyData.getAirlineCount().div(2)){
-            flightSuretyData.registerAirline(name,airline);
-            return (true, votes);
-        }
-        else{
-            return (false, votes);//voted, but not yet registered due to consensus not achieved.
-        }
-        
+        require(!duplicate,"Duplicate votes for airline not allowed!");
+        uint256 votes = flightSuretyData.getAirlineVotesCount(voteCountHash);
+        require(votes >= flightSuretyData.getAirlineCount().div(2) , "Consensus of 50% not achieved.");
+        flightSuretyData.registerAirline(name,airline);
     }
 
-
+    function getHash3(string name,string airline,address sender) public view returns (bytes32)
+    {
+        return keccak256(abi.encodePacked(name,airline,sender));
+    }
+    function getHash2(string name,string airline) public view returns (bytes32)
+    {
+        return keccak256(abi.encodePacked(name,airline));
+    }
    /**
     * @dev Register a future flight for insuring.
     *

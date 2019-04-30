@@ -77,7 +77,7 @@ contract FlightSuretyData {
         insuredLedger[airline].insuredFlightDetails[insuredFlightCounter - 1].markRefund = false;//set this to indicate, no refund has been initiated yet.
     }
     
-    uint256 private constant init_fund_price = 10 ether;
+    uint256 private constant init_fund_price = 1 ether;
     uint256 public airlineCount = 0;// count of airlines that are registered and funded.
     address[] public initialAirlines = new address[](0);
 
