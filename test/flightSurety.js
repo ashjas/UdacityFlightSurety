@@ -90,7 +90,7 @@ contract('Flight Surety Tests', async (accounts) => {
 
     // ACT
     try {
-        await config.flightSuretyApp.registerAirline("AirIndia2",newAirline, {from: config.firstAirline});
+        await config.flightSuretyApp.registerAirline("AirIndia2",newAirline,newAirline.toString(), {from: config.firstAirline});
     }
     catch(e) {
 
@@ -149,10 +149,10 @@ contract('Flight Surety Tests', async (accounts) => {
      // ACT
      try {
           //register and fund 2nd
-          await config.flightSuretyApp.registerAirline("AirIndia2",airline2, {from: config.owner});
+          await config.flightSuretyApp.registerAirline("AirIndia2",airline2,airline2.toString(), {from: config.owner});
           await config.flightSuretyData.fund({from: airline2,value: Web3.utils.toWei('10', 'ether')});
           //register and fund 3rd
-          await config.flightSuretyApp.registerAirline("AirIndia3",airline3, {from: airline2});
+          await config.flightSuretyApp.registerAirline("AirIndia3",airline3,airline3.toString(), {from: airline2});
           await config.flightSuretyData.fund({from: airline3,value: Web3.utils.toWei('10', 'ether')});
      }
      catch(e) {
@@ -174,7 +174,7 @@ contract('Flight Surety Tests', async (accounts) => {
     // ACT
     try {
          //register and fund 5th.. should error out..
-         result = await config.flightSuretyApp.registerAirline("AirIndia5",airline5, {from: airline4});
+         result = await config.flightSuretyApp.registerAirline("AirIndia5",airline5,airline5.toString(), {from: airline4});
          if(result)
             await config.flightSuretyData.fund({from: airline5,value: Web3.utils.toWei('10', 'ether')});
     }
@@ -193,7 +193,7 @@ contract('Flight Surety Tests', async (accounts) => {
   // ACT
   try {
        //register and fund 4th
-       await config.flightSuretyApp.registerAirline("AirIndia4",airline4, {from: airline3});
+       await config.flightSuretyApp.registerAirline("AirIndia4",airline4,airline4.toString(), {from: airline3});
        await config.flightSuretyData.fund({from: airline4,value: Web3.utils.toWei('10', 'ether')});
   }
   catch(e) {
@@ -214,9 +214,9 @@ contract('Flight Surety Tests', async (accounts) => {
   let airlineCount = await config.flightSuretyData.getAirlineCount.call();
   console.log("Total AirlineCount:" + airlineCount);
   
-  let voteCountHash1 = await config.flightSuretyApp.getHash2("AirIndia5",airline5);
+  let voteCountHash1 = await config.flightSuretyApp.getHash2("AirIndia5",airline5.toString());
   console.log("voteCountHash1: " + voteCountHash1);
-  let airlineVotedKey = await config.flightSuretyApp.getHash3("AirIndia5",airline5,airline1);
+  let airlineVotedKey = await config.flightSuretyApp.getHash3("AirIndia5",airline5.toString(),airline1.toString());
   console.log("airlineVotedKey: " + airlineVotedKey);
   let voted = await config.flightSuretyData.getAirlineVotes(airlineVotedKey);
   let voteCount = await config.flightSuretyData.getAirlineVotesCount.call(voteCountHash1);
@@ -226,7 +226,7 @@ contract('Flight Surety Tests', async (accounts) => {
   // ACT 1111
   try {
        //register and fund 5th.. should error out..
-    await config.flightSuretyApp.registerAirline("AirIndia5",airline5, {from: airline1});//vote by airline1
+    await config.flightSuretyApp.registerAirline("AirIndia5",airline5,airline5.toString(), {from: airline1});//vote by airline1
   }
   catch(e){
     reverted = true;
@@ -237,9 +237,9 @@ contract('Flight Surety Tests', async (accounts) => {
   // voteCount = await config.flightSuretyData.getAirlineVotesCount.call(voteCountHash1);
   // console.log("airline5 VoteCount:" + voteCount);
 
-  voteCountHash1 = await config.flightSuretyApp.getHash2("AirIndia5",airline5);
+  voteCountHash1 = await config.flightSuretyApp.getHash2("AirIndia5",airline5.toString());
   console.log("voteCountHash1: " + voteCountHash1);
-  airlineVotedKey = await config.flightSuretyApp.getHash3("AirIndia5",airline5,airline1);
+  airlineVotedKey = await config.flightSuretyApp.getHash3("AirIndia5",airline5.toString(),airline1.toString());
   console.log("airlineVotedKey: " + airlineVotedKey);
   voted = await config.flightSuretyData.getAirlineVotes(airlineVotedKey);
   voteCount = await config.flightSuretyData.getAirlineVotesCount.call(voteCountHash1);
@@ -251,7 +251,7 @@ contract('Flight Surety Tests', async (accounts) => {
   // ACT 2222
   reverted = false;
   try{
-    await config.flightSuretyApp.registerAirline("AirIndia5",airline5, {from: airline1});//vote by airline2 making it 50% consensus
+    await config.flightSuretyApp.registerAirline("AirIndia5",airline5,airline5.toString(), {from: airline2});//vote by airline2 making it 50% consensus
   }
   catch(e){
     reverted = true;
@@ -262,9 +262,9 @@ contract('Flight Surety Tests', async (accounts) => {
   // voteCount = await config.flightSuretyData.getAirlineVotesCount.call(voteCountHash2);
   // console.log("airline5 VoteCount:" + voteCount);
 
-  voteCountHash1 = await config.flightSuretyApp.getHash2("AirIndia5",airline5);
+  voteCountHash1 = await config.flightSuretyApp.getHash2("AirIndia5",airline5.toString());
   console.log("voteCountHash1: " + voteCountHash1);
-  airlineVotedKey = await config.flightSuretyApp.getHash3("AirIndia5",airline5,airline1);
+  airlineVotedKey = await config.flightSuretyApp.getHash3("AirIndia5",airline5.toString(),airline2.toString());
   console.log("airlineVotedKey: " + airlineVotedKey);
   voted = await config.flightSuretyData.getAirlineVotes(airlineVotedKey);
   voteCount = await config.flightSuretyData.getAirlineVotesCount.call(voteCountHash1);

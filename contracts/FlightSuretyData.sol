@@ -199,7 +199,7 @@ contract FlightSuretyData {
 
     function setAirlineVotesCount(bytes32 key) requireIsOperational() external
     {
-        airlineVotesCount[key] += 1;
+        airlineVotesCount[key] = airlineVotesCount[key] + 1;
     }
 
     function getRegisteredFlight(address user) requireIsOperational() external view returns (bytes32)

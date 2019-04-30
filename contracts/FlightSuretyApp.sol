@@ -159,7 +159,12 @@ contract FlightSuretyApp {
     /*                                     SMART CONTRACT FUNCTIONS                             */
     /********************************************************************************************/
 
-  
+    function toString(address x) returns (string) {
+    bytes memory b = new bytes(20);
+    for (uint i = 0; i < 20; i++)
+        b[i] = byte(uint8(uint(x) / (2**(8*(19 - i)))));
+    return string(b);
+    }
    /**
     * @dev Add an airline to the registration queue
     *
@@ -167,7 +172,8 @@ contract FlightSuretyApp {
     function registerAirline
                             (   
                                 string name,
-                                address airline
+                                address airline,
+                                string airline_string
                             )
                             requireIsOperational()
                             requireRegisterByExisting(name,airline)
@@ -176,8 +182,8 @@ contract FlightSuretyApp {
     {
         //code for multi party consensus.
         // if here, 4 airlines have already been registered.
-        bytes32 airlineVotedKey = keccak256(abi.encodePacked(name,airline,msg.sender));
-        bytes32 voteCountHash = keccak256(abi.encodePacked(name,airline));
+        bytes32 airlineVotedKey = keccak256(abi.encodePacked(name,airline_string,msg.sender));
+        bytes32 voteCountHash = keccak256(abi.encodePacked(name,airline_string));
         bool duplicate = true;// this means, already voted address tried to registerAirline again.
         if(flightSuretyData.getAirlineVotes(airlineVotedKey) == 0)//this ensures same airline does not vote for another airline again.
         {
