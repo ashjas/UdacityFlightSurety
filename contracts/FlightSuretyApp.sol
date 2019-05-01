@@ -173,7 +173,8 @@ contract FlightSuretyApp {
                             (   
                                 string name,
                                 address airline,
-                                string airline_string
+                                string airline_string,
+                                string sender_string
                             )
                             requireIsOperational()
                             requireRegisterByExisting(name,airline)
@@ -182,7 +183,7 @@ contract FlightSuretyApp {
     {
         //code for multi party consensus.
         // if here, 4 airlines have already been registered.
-        bytes32 airlineVotedKey = keccak256(abi.encodePacked(name,airline_string,msg.sender));
+        bytes32 airlineVotedKey = keccak256(abi.encodePacked(name,airline_string,sender_string));
         bytes32 voteCountHash = keccak256(abi.encodePacked(name,airline_string));
         bool duplicate = true;// this means, already voted address tried to registerAirline again.
         if(flightSuretyData.getAirlineVotes(airlineVotedKey) == 0)//this ensures same airline does not vote for another airline again.
@@ -197,7 +198,7 @@ contract FlightSuretyApp {
         flightSuretyData.registerAirline(name,airline);
     }
 
-    function getHash3(string name,string airline,address sender) public view returns (bytes32)
+    function getHash3(string name,string airline,string sender) public view returns (bytes32)
     {
         return keccak256(abi.encodePacked(name,airline,sender));
     }
