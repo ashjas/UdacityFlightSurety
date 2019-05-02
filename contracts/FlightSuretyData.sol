@@ -14,6 +14,7 @@ contract FlightSuretyData {
     address private appContractOwner;
     bool private operational = true;                                    // Blocks all state changes throughout the contract if false
     uint256 private REQUIRED_CONSENSUS_M = 4;//defaults to 4
+    uint256 private REQUIRED_CONSENSUS_PERCENT = 2;
     struct Airline 
     {
         string name;
@@ -77,7 +78,7 @@ contract FlightSuretyData {
         insuredLedger[airline].insuredFlightDetails[insuredFlightCounter - 1].markRefund = false;//set this to indicate, no refund has been initiated yet.
     }
     
-    uint256 private constant init_fund_price = 1 ether;
+    uint256 private constant init_fund_price = 10 wei;
     uint256 public airlineCount = 0;// count of airlines that are registered and funded.
     address[] public initialAirlines = new address[](0);
 
@@ -141,6 +142,18 @@ contract FlightSuretyData {
         }
     }
 
+    //modifier requireConsensus(string name,string airline_string)
+    modifier requireConsensus(string name)
+    {
+        if(this.getAirlineCount() >= REQUIRED_CONSENSUS_M)
+        {
+            //address airline = flightSuretyData.getAirlineAddressByName(name);
+            bytes32 voteCountHash = keccak256(abi.encodePacked(name,flightName2AirlineAddress[name]));
+            uint256 votes = this.getAirlineVotesCount(voteCountHash);
+            require(votes >= this.getAirlineCount().div(REQUIRED_CONSENSUS_PERCENT),"Consensus of Airline votes not met.");
+        }
+        _;
+    }
 
     /********************************************************************************************/
     /*                                       UTILITY FUNCTIONS                                  */
@@ -165,6 +178,11 @@ contract FlightSuretyData {
     function authorizeCaller(address caller) public
     {
         authorized[caller] = true;
+    }
+
+    function getAirlineAddressByName(string name) public returns (address)
+    {
+        return flightName2AirlineAddress[name];
     }
 
     function isAuthorized(address caller) public view returns (bool)
@@ -239,6 +257,11 @@ contract FlightSuretyData {
     {
         bytes32 key = keccak256(abi.encodePacked(airline, flight, timestamp));
         flights[key].statusCode = statusCode;
+    }
+
+    function setConsensus_Perc(uint256 p) external requireIsOperational()
+    {
+        REQUIRED_CONSENSUS_M = p;
     }
 
     function setConsensus_M(uint256 m) external requireIsOperational()
@@ -364,12 +387,17 @@ contract FlightSuretyData {
     *      resulting in insurance payouts, the contract should be self-sustaining
     *
     */   
-    function fund()
+    function fund(string name)
                   public
                   payable
                   requireIsOperational()
                   requireEnoughFunding()
+                  //requireConsensus(name)
     {
+        if(msg.sender == flightName2AirlineAddress[name])
+        {
+            //require(false,"force failure..");
+        }
         uint256 val = msg.value;
         contractOwner.transfer(val);
         registeredAirlines[msg.sender].isFunded = true;
@@ -404,7 +432,7 @@ contract FlightSuretyData {
                             payable 
                             requireIsOperational()
     {
-        fund();
+        fund("");
     }
 
 

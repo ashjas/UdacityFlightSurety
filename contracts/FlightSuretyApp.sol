@@ -24,6 +24,7 @@ contract FlightSuretyApp {
     uint8 private constant STATUS_CODE_LATE_TECHNICAL = 40;
     uint8 private constant STATUS_CODE_LATE_OTHER = 50;
     uint256 private constant REQUIRED_CONSENSUS_M = 4;
+    uint256 private constant REQUIRED_CONSENSUS_PERCENT = 2;
 
     address private contractOwner;          // Account used to deploy contract
     FlightSuretyData flightSuretyData;
@@ -90,6 +91,18 @@ contract FlightSuretyApp {
         }
     }
 
+    modifier requireConsensus(string name,string airline_string)
+    {
+        if(flightSuretyData.getAirlineCount() >= REQUIRED_CONSENSUS_M)
+        {
+            //address airline = flightSuretyData.getAirlineAddressByName(name);
+            bytes32 voteCountHash = keccak256(abi.encodePacked(name,airline_string));
+            uint256 votes = flightSuretyData.getAirlineVotesCount(voteCountHash);
+            require(votes >= flightSuretyData.getAirlineCount().div(2),"Consensus of 50% Airline votes not met.");
+        }
+        _;
+    }
+
     // /**
     // * @dev Modifier that requires that airline getting registered upto 4th is only registered by one of already registered airline.
     // */
@@ -117,6 +130,7 @@ contract FlightSuretyApp {
         contractOwner = msg.sender;
         flightSuretyData = FlightSuretyData(dataContract);
         flightSuretyData.setConsensus_M(REQUIRED_CONSENSUS_M);// pass on to reset/set the consensus number;
+        flightSuretyData.setConsensus_Perc(REQUIRED_CONSENSUS_PERCENT);
         flightSuretyData.registerAirline("AirIndia",msg.sender);
         flightSuretyData.setAppContractOwner(contractOwner);
         //address firstAirline = "0x857c4e76174837b6feb808d1f2312b2b107a612b";// accounts[1]
@@ -124,10 +138,9 @@ contract FlightSuretyApp {
         //flightSuretyData.fund();
     }
 
-    function fund() requireIsOperational() external payable
+    function fund(string name,string airline_address) requireIsOperational() requireConsensus(name,airline_address) external payable
     {
-        //flightSuretyData.fund.value(msg.value);
-        flightSuretyData.fund();
+        flightSuretyData.fund.value(msg.value)(name);
     }
     /********************************************************************************************/
     /*                                       UTILITY FUNCTIONS                                  */
@@ -194,8 +207,9 @@ contract FlightSuretyApp {
         }
         require(!duplicate,"Duplicate votes for airline not allowed!");
         uint256 votes = flightSuretyData.getAirlineVotesCount(voteCountHash);
-        require(votes >= flightSuretyData.getAirlineCount().div(2) , "Consensus of 50% not achieved.");
-        flightSuretyData.registerAirline(name,airline);
+        //require(votes >= flightSuretyData.getAirlineCount().div(2) , "Consensus of 50% not achieved.");
+        if(votes >= flightSuretyData.getAirlineCount().div(2))
+            flightSuretyData.registerAirline(name,airline);
     }
 
     function getHash3(string name,string airline,string sender) public view returns (bytes32)
@@ -457,10 +471,12 @@ contract FlightSuretyApp {
 }
 
 contract FlightSuretyData{
+    function getAirlineAddressByName(string name) public returns (address);
     function isOperational() public view returns(bool);
     function setOperatingStatus(bool mode) external;
     function registerAirline(string name,address airline) external;
     function setConsensus_M(uint256 m) external;
+    function setConsensus_Perc(uint256 p) external;
     function getInitialAirlines(uint256 i) external returns (address);
     function getAirlineCount() external returns (uint256);
     function getAirlineVotes(bytes32 key) external returns (uint256);
@@ -472,6 +488,6 @@ contract FlightSuretyData{
     function buy(string airlineName,string flightName,uint256 timestamp,address customer,uint256 payAmount) external payable;
     function creditInsurees(address airline,string flightName,uint256 timestamp) external;
     function pay(string airlineName,string flightName,uint256 timestamp) external;
-    function fund() public payable;
+    function fund(string name) public payable;
     function setAppContractOwner(address) public;
 }
