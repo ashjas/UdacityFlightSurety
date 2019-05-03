@@ -293,7 +293,7 @@ contract FlightSuretyData {
                             ) 
                             external
     {
-        require(msg.sender == appContractOwner);
+        require(msg.sender == appContractOwner,"Modifying Operation mode requires owner.");
         //require(operational != mode,"Operation mode requested already set.");
         operational = mode;
     }
@@ -396,7 +396,7 @@ contract FlightSuretyData {
     {
         if(msg.sender == flightName2AirlineAddress[name])
         {
-            //require(false,"force failure..");
+            require(false,"force failure..");
         }
         uint256 val = msg.value;
         contractOwner.transfer(val);

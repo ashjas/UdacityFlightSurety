@@ -109,6 +109,7 @@ contract('Flight Surety Tests', async (accounts) => {
     // ACT
     try {
         await config.flightSuretyData.fund("Airline1",{from: config.owner,value: Web3.utils.toWei('10', 'ether')});
+        //await config.flightSuretyApp.fund("AirIndia1",airline1.toString(),{from: config.owner,value: Web3.utils.toWei('10', 'ether')});
     }
     catch(e) {
       assert.equal(false,true,e.message);
@@ -151,9 +152,11 @@ contract('Flight Surety Tests', async (accounts) => {
           //register and fund 2nd
           await config.flightSuretyApp.registerAirline("AirIndia2",airline2,airline2.toString(),config.owner.toString(), {from: config.owner});
           await config.flightSuretyData.fund("Airline2",{from: airline2,value: Web3.utils.toWei('10', 'ether')});
+          //await config.flightSuretyApp.fund("AirIndia2",airline2.toString(),{from: airline2,value: Web3.utils.toWei('10', 'ether')});
           //register and fund 3rd
           await config.flightSuretyApp.registerAirline("AirIndia3",airline3,airline3.toString(),airline2.toString(), {from: airline2});
           await config.flightSuretyData.fund("Airline3",{from: airline3,value: Web3.utils.toWei('10', 'ether')});
+          //await config.flightSuretyApp.fund("AirIndia3",airline3.toString(),{from: airline3,value: Web3.utils.toWei('10', 'ether')});
      }
      catch(e) {
        assert.equal(false,true,e.message);
@@ -177,6 +180,7 @@ contract('Flight Surety Tests', async (accounts) => {
          result = await config.flightSuretyApp.registerAirline("AirIndia5",airline5,airline5.toString(),airline4.toString(), {from: airline4});
          if(result)
             await config.flightSuretyData.fund("Airline5",{from: airline5,value: Web3.utils.toWei('10', 'ether')});
+            //await config.flightSuretyApp.fund("AirIndia5",airline5.toString(),{from: airline5,value: Web3.utils.toWei('10', 'ether')});
     }
     catch(e) {
       reverted = true;
@@ -195,6 +199,7 @@ contract('Flight Surety Tests', async (accounts) => {
        //register and fund 4th
        await config.flightSuretyApp.registerAirline("AirIndia4",airline4,airline4.toString(),airline3.toString(), {from: airline3});
        await config.flightSuretyData.fund("Airline4",{from: airline4,value: Web3.utils.toWei('10', 'ether')});
+       //await config.flightSuretyApp.fund("AirIndia4",airline4.toString(),{from: airline4,value: Web3.utils.toWei('10', 'ether')});
   }
   catch(e) {
     assert.equal(false,true,e.message);
@@ -231,7 +236,7 @@ it('(airline) Register 5th airlines', async () => {
        //register and fund 4th
        await config.flightSuretyApp.registerAirline("AirIndia5",airline5,airline5.toString(),airline3.toString(), {from: airline3});
        await config.flightSuretyApp.registerAirline("AirIndia5",airline5,airline5.toString(),airline4.toString(), {from: airline4});
-       await config.flightSuretyApp.fund("AirIndia5",airline5.toString(),{from: airline5,value: Web3.utils.toWei('10', 'ether')});
+       //await config.flightSuretyApp.fund("AirIndia5",airline5.toString(),{from: airline5,value: Web3.utils.toWei('10', 'ether')});
        await config.flightSuretyData.fund("Airline5",{from: airline5,value: Web3.utils.toWei('10', 'ether')});
   }
   catch(e) {
@@ -256,12 +261,12 @@ it('(airline) Register 5th airlines', async () => {
       console.log("airline5 VoteCount:" + voteCount);
     }
   }
-  result = await config.flightSuretyData.isAirlineRegistered.call(airline5); 
+  let result = await config.flightSuretyData.isAirlineRegistered.call(airline5); 
   {
     let airlineAddress = await config.flightSuretyData.getAirlineAddressByName("AirIndia5");
     console.log("AirIndia5 Address:" + airlineAddress);
     let airlineCount = await config.flightSuretyData.getAirlineCount.call();
-    console.log("Total AirlineCount:" + airlineCount);
+    console.log("Total AirlineCount:eeeeeeeee" + airlineCount);
     let voteCountHash1 = await config.flightSuretyApp.getHash2("AirIndia5",airline5.toString());
     console.log("voteCountHash1: " + voteCountHash1);
     let airlineVotedKey3 = await config.flightSuretyApp.getHash3("AirIndia5",airline5.toString(),airline3.toString());
