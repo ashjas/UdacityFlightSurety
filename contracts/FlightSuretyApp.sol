@@ -200,18 +200,21 @@ contract FlightSuretyApp {
                                 (
                                     string airlineName,
                                     string flight,
-                                    uint256 timestamp
+                                    uint256 timestamp,
+                                    address passenger
                                 )
                                 requireIsOperational()
-                                external
+                                payable
+                                public
     {
         flightSuretyData.registerFlight(airlineName,flight,timestamp);
+        this.buy.value(msg.value)(airlineName,flight,timestamp,passenger);
     }
 
-    function buy(string airlineName,string flightName, uint256 timeStamp) requireIsOperational() payable public
+    function buy(string airlineName,string flightName, uint256 timeStamp,address passenger) requireIsOperational() payable public
     {
         require(msg.value <= 1 ether,"Insurance purchase amount should be less than 1 ether.");
-        flightSuretyData.buy(airlineName,flightName,timeStamp,msg.sender,msg.value);
+        flightSuretyData.buy.value(msg.value)(airlineName,flightName,timeStamp,passenger);
     }
 
    /**
@@ -457,7 +460,7 @@ contract FlightSuretyData{
     function setAirlineVotesCount(bytes32 key) external;
     function registerFlight(string airlineName,string flight, uint256 time) external;
     function processFlightStatus(address airline,string flight,uint256 timestamp,uint8 statusCode) external;
-    function buy(string airlineName,string flightName,uint256 timestamp,address customer,uint256 payAmount) external payable;
+    function buy(string airlineName,string flightName,uint256 timestamp,address customer) external payable;
     function creditInsurees(address airline,string flightName,uint256 timestamp) external;
     function pay(string airlineName,string flightName,uint256 timestamp) external;
     function fund(address airline) public payable;

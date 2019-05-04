@@ -33,7 +33,7 @@ contract FlightSuretyData {
     mapping(address => bool) private authorized;
     mapping(address => bytes32) private registeredFlight;//user to registered flight key mapping
     mapping(bytes32 => Flight) private flights;// flights operating in the system.
-    mapping(string => address) private flightName2AirlineAddress;
+    mapping(string => address) private airlineName2AirlineAddress;
     mapping(address => Airline) private registeredAirlines;
     mapping(bytes32 => uint256) public airlineVotes;// hash of name+airline+msg.sender => for tracking who already voted.
     mapping(bytes32 => uint256) public airlineVotesCount;// hash of name+airline => for vote Counting
@@ -51,8 +51,24 @@ contract FlightSuretyData {
     struct InsuredFlights
     {
         InsuredFlightCustomers[] insuredFlightDetails;// index is derived from hash of InsuredFlightIndexHash[flightName+timestamp] => index.
-    }    
-    mapping(address => InsuredFlights) private insuredLedger;// hash of airline address to mapping of insureeFunds.
+    }
+     struct FlightInsuredCustomers
+    {
+        address customer;
+        uint256 insuranceAmount;
+    }
+    struct AirlineInsuredFlights
+    {
+        //InsuredFlightCustomer[] flightCustomers;// index is derived from hash of InsuredCustomerIndexHash[customerAddress+flightName+timestamp] => index.
+        mapping(bytes32 => FlightInsuredCustomers) flightInsuredCustomers;
+        bool markRefund;
+    }
+    struct AllInsuredFlights
+    {
+        //InsuredFlightCustomers[] insuredFlightDetails;// index is derived from hash of InsuredFlightIndexHash[flightName+timestamp] => index.
+        mapping(bytes32 => AirlineInsuredFlights) airlineInsuredFlights;
+    }
+    mapping(address => AllInsuredFlights) private insuredLedger;// hash of airline address to mapping of insureeFunds.
 
     uint256 insuredFlightCounter = 0;
     uint256 insuredFlightCustomerCounter = 0;
@@ -64,18 +80,31 @@ contract FlightSuretyData {
     // uint256 customerIdx = InsuredCustomerIndexHash[keccak256(abi.encodePacked(customerAddress,flightName,timestamp))];
     // address customer = insuredFlights.insuredFlightDetails[flightIdx].flightCustomers[customerIdx].customer;
     // uint256 customerInsuranceAmount = insuredFlights.insuredFlightDetails[flightIdx].flightCustomers[customerIdx].insuranceAmount;
-    function addInsuredCustomer(address airline, string flightName,uint256 timestamp, address customerAddress, uint256 payAmount ) external payable requireIsOperational()
+    function addInsuredCustomer(address airline, string flightName,uint256 timestamp, address customerAddress)
+                                external
+                                payable
+                                requireIsOperational()
+                                //requireFlightNotInsured(airline,flightName,timestamp,customerAddress)
     {
-        // update the indexHashes..
-        InsuredFlightIndexHash[keccak256(abi.encodePacked(flightName,timestamp))] = insuredFlightCounter++;
-        InsuredCustomerIndexHash[keccak256(abi.encodePacked(customerAddress,flightName,timestamp))] = insuredFlightCustomerCounter++;
-        InsuredFlightCustomer memory ifc = InsuredFlightCustomer({    
+        bytes32 airlineInsuredFlightsIdx = keccak256(abi.encodePacked(flightName,timestamp));
+        bytes32 flightInsuredCustomersIdx = keccak256(abi.encodePacked(customerAddress,flightName,timestamp));
+        FlightInsuredCustomers ifc = insuredLedger[airline].airlineInsuredFlights[airlineInsuredFlightsIdx].flightInsuredCustomers[flightInsuredCustomersIdx];
+        require(ifc.customer != customerAddress,"One customer can purchase a single insurance only.");
+        uint256 payAmount = msg.value;
+        // InsuredFlightIndexHash[keccak256(abi.encodePacked(flightName,timestamp))] = insuredFlightCounter;
+        // InsuredCustomerIndexHash[keccak256(abi.encodePacked(customerAddress,flightName,timestamp))] = insuredFlightCustomerCounter;
+        
+        FlightInsuredCustomers memory ifc1 = FlightInsuredCustomers({    
             customer : customerAddress,
             insuranceAmount: payAmount
         });
         contractOwner.transfer(payAmount);
-        insuredLedger[airline].insuredFlightDetails[insuredFlightCounter - 1].flightCustomers[insuredFlightCustomerCounter - 1] = ifc;
-        insuredLedger[airline].insuredFlightDetails[insuredFlightCounter - 1].markRefund = false;//set this to indicate, no refund has been initiated yet.
+        insuredLedger[airline].airlineInsuredFlights[airlineInsuredFlightsIdx].flightInsuredCustomers[flightInsuredCustomersIdx] = ifc1;
+        insuredLedger[airline].airlineInsuredFlights[airlineInsuredFlightsIdx].markRefund = false;
+        // insuredLedger[airline].insuredFlightDetails[insuredFlightCounter].flightCustomers[insuredFlightCustomerCounter] = ifc;
+        // insuredLedger[airline].insuredFlightDetails[insuredFlightCounter].markRefund = false;//set this to indicate, no refund has been initiated yet.
+        // insuredFlightCounter = insuredFlightCounter + 1;
+        // insuredFlightCustomerCounter = insuredFlightCustomerCounter + 1;
     }
     
     uint256 private constant init_fund_price = 10 wei;
@@ -148,13 +177,21 @@ contract FlightSuretyData {
         if(this.getAirlineCount() >= REQUIRED_CONSENSUS_M)
         {
             //address airline = flightSuretyData.getAirlineAddressByName(name);
-            bytes32 voteCountHash = keccak256(abi.encodePacked(name,flightName2AirlineAddress[name]));
+            bytes32 voteCountHash = keccak256(abi.encodePacked(name,airlineName2AirlineAddress[name]));
             uint256 votes = this.getAirlineVotesCount(voteCountHash);
             require(votes >= this.getAirlineCount().div(REQUIRED_CONSENSUS_PERCENT),"Consensus of Airline votes not met.");
         }
         _;
     }
 
+    modifier requireFlightNotInsured(address airline, string flightName,uint256 timestamp, address customerAddress)
+    {
+        bytes32 airlineInsuredFlightsIdx = keccak256(abi.encodePacked(flightName,timestamp));
+        bytes32 flightInsuredCustomersIdx = keccak256(abi.encodePacked(customerAddress,flightName,timestamp));
+        FlightInsuredCustomers ifc = insuredLedger[airline].airlineInsuredFlights[airlineInsuredFlightsIdx].flightInsuredCustomers[flightInsuredCustomersIdx];
+        require(ifc.customer != customerAddress,"One customer can purchase a single insurance only.");
+        _;
+    }
     /********************************************************************************************/
     /*                                       UTILITY FUNCTIONS                                  */
     /********************************************************************************************/
@@ -177,7 +214,7 @@ contract FlightSuretyData {
 
     function getAirlineAddressByName(string name) public view returns (address)
     {
-        return flightName2AirlineAddress[name];
+        return airlineName2AirlineAddress[name];
     }
 
     function isAuthorized(address caller) public view returns (bool)
@@ -220,23 +257,29 @@ contract FlightSuretyData {
         return registeredFlight[user];
     }
 
-    function getFlight(string flight, address airline, uint256 timestamp) requireIsOperational() external view returns (Flight)
+    function getFlight(string flight, string airlineName, uint256 timestamp) requireIsOperational() external view returns (Flight)
     {
-        bytes32 key = keccak256(abi.encodePacked(airline, flight, timestamp));
+        bytes32 key = keccak256(abi.encodePacked(airlineName2AirlineAddress[airlineName], flight, timestamp));
         return flights[key];
     }
-    
+
+    function isFlightRegistered(string flight, string airlineName, uint256 timestamp) requireIsOperational() external view returns (bool)
+    {
+        bytes32 key = keccak256(abi.encodePacked(airlineName2AirlineAddress[airlineName], flight, timestamp));
+        return flights[key].isRegistered;
+    }
+
     // this function registers a flight in the data contract.
     function registerFlight(string airlineName,string flight, uint256 time) requireIsOperational() external
     {
-        bytes32 key = keccak256(abi.encodePacked(flightName2AirlineAddress[airlineName], flight, time));//TODO: flightName2Airline is actually airlineName2AirlineAddress.
-        require(flights[key].isRegistered == false,"Flight already registered.");
+        bytes32 key = keccak256(abi.encodePacked(airlineName2AirlineAddress[airlineName], flight, time));//TODO: flightName2Airline is actually airlineName2AirlineAddress.
+        //require(flights[key].isRegistered == false,"Flight already registered.");
         flights[key] = Flight({
                                         isRegistered: true,
                                         statusCode: 0,//STATUS_CODE_UNKNOWN
                                         flight: flight,
                                         timestamp: time,
-                                        airline: flightName2AirlineAddress[airlineName]
+                                        airline: airlineName2AirlineAddress[airlineName]
                                     });        
     }
 
@@ -311,7 +354,7 @@ contract FlightSuretyData {
                             external
     {
         registeredAirlines[airline].name = name;
-        flightName2AirlineAddress[name] = airline;
+        airlineName2AirlineAddress[name] = airline;
     }
 
    /**
@@ -322,16 +365,15 @@ contract FlightSuretyData {
                             (   string airlineName,
                                 string flightName,
                                 uint256 timestamp,
-                                address customerAddress,
-                                uint256 payAmount
+                                address passenger
                             )
                             requireIsOperational()
                             external
                             payable
     {
-        bytes32 key = keccak256(abi.encodePacked(flightName2AirlineAddress[airlineName], flightName, timestamp));
+        bytes32 key = keccak256(abi.encodePacked(airlineName2AirlineAddress[airlineName], flightName, timestamp));
         require(flights[key].isRegistered == true,"Flight not registered yet");
-        this.addInsuredCustomer(flightName2AirlineAddress[airlineName],flightName,timestamp,customerAddress,payAmount);
+        this.addInsuredCustomer.value(msg.value)(airlineName2AirlineAddress[airlineName],flightName,timestamp,passenger);
     }
 
     /**
@@ -346,8 +388,8 @@ contract FlightSuretyData {
                                 requireIsOperational()
                                 external
     {
-        uint256 delayedFlightIdx = InsuredFlightIndexHash[keccak256(abi.encodePacked(flightName,timestamp))];
-        insuredLedger[airline].insuredFlightDetails[delayedFlightIdx - 1].markRefund = true;
+        bytes32 delayedFlightIdx = keccak256(abi.encodePacked(flightName,timestamp));
+        insuredLedger[airline].airlineInsuredFlights[delayedFlightIdx].markRefund = true;
     }
     
 
@@ -365,14 +407,14 @@ contract FlightSuretyData {
                             external payable
     {
         address customer = msg.sender;
-        uint256 delayedFlightIdx = InsuredFlightIndexHash[keccak256(abi.encodePacked(flightName,timestamp))];
-        uint256 customerIdx = InsuredCustomerIndexHash[keccak256(abi.encodePacked(customer,flightName,timestamp))];
-        address airline = flightName2AirlineAddress[airlineName];
-        if(insuredLedger[airline].insuredFlightDetails[delayedFlightIdx - 1].markRefund == true)
+        bytes32 delayedFlightIdx = keccak256(abi.encodePacked(flightName,timestamp));
+        bytes32 customerIdx = keccak256(abi.encodePacked(customer,flightName,timestamp));
+        address airline = airlineName2AirlineAddress[airlineName];
+        if(insuredLedger[airline].airlineInsuredFlights[delayedFlightIdx].markRefund == true)
         {
-            uint256 refundAmount = insuredLedger[airline].insuredFlightDetails[delayedFlightIdx - 1].flightCustomers[customerIdx - 1].insuranceAmount;
+            uint256 refundAmount = insuredLedger[airline].airlineInsuredFlights[delayedFlightIdx].flightInsuredCustomers[customerIdx].insuranceAmount;
             refundAmount = refundAmount.mul(3).div(2);
-            insuredLedger[airline].insuredFlightDetails[delayedFlightIdx - 1].flightCustomers[customerIdx - 1].insuranceAmount = 0;//remove the credit.
+            insuredLedger[airline].airlineInsuredFlights[delayedFlightIdx].flightInsuredCustomers[customerIdx].insuranceAmount = 0;//remove the credit.
             customer.transfer(refundAmount);
         }
     }

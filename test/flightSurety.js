@@ -229,6 +229,79 @@ it('(airline) Register 5th airlines', async () => {
   }
   let result = await config.flightSuretyData.isAirlineRegistered.call(airline5); 
   assert.equal(result, true, "Airline5 should be able to register.\n" + exceptionMessage);
+  
+  // //debug..
+  // let airlineCount = await config.flightSuretyData.getAirlineCount.call();
+  // for(i=airlineCount; i < airlineCount ; ++i)
+  // {
+  //   let airlineName = await config.flightSuretyData.getAirlineAddressByName.call("");
+  //   console.log
+  // }
+});
+
+it('(airline) Duplicate voting is not allowed.', async () => {
+    
+  // ARRANGE
+  let airline5 = accounts[4];
+  let airline6 = accounts[5];
+
+  // ACT
+  try {
+       //register and fund 4th
+       encodedairline5 = web3EthAbi.encodeParameters(['address'],[airline5]);
+       encodedairline6 = web3EthAbi.encodeParameters(['address'],[airline6]);
+       await config.flightSuretyApp.registerAirline("AirIndia6",encodedairline6,encodedairline3, {from: airline5});// first vote by airline5
+       await config.flightSuretyApp.registerAirline("AirIndia6",encodedairline6,encodedairline3, {from: airline5});// second vote by airline5
+  }
+  catch(e) {
+    //assert.equal(false,true,e.message);
+  }
+  result = await config.flightSuretyData.isAirlineRegistered.call(airline6); 
+  assert.equal(result, false, "Airline6 was registered through duplicate voting!");
+});
+
+it('(insurance) Buy Insurance', async () => {
+    
+  // ARRANGE
+  let passenger = accounts[6];
+  let airlineName = "AirIndia1";
+  let timestamp = 0;
+  let flight = "AIR007";
+  let insuredAmount = Web3.utils.toWei("0.9","ether");
+
+  // ACT
+  try {
+       //registerFlight
+       encodedPassenger = web3EthAbi.encodeParameters(['address'],[passenger]);
+       await config.flightSuretyApp.registerFlight(airlineName,flight,timestamp,encodedPassenger,{from:passenger,value:insuredAmount});
+  }
+  catch(e) {
+    assert.equal(false,true,e.message);
+  }
+  result = await config.flightSuretyData.isFlightRegistered.call(flight,airlineName,timestamp);
+  assert.equal(result,true, "Flight was Not registered!");
+});
+
+it('(insurance) Buy Insurance for a flight more than once.', async () => {
+    
+  // ARRANGE
+  let passenger = accounts[6];
+  let airlineName = "AirIndia1";
+  let timestamp = 0;
+  let flight = "AIR007";
+  let insuredAmount = Web3.utils.toWei("0.9","ether");
+  let reverted = false;
+  // ACT
+  try {
+       //registerFlight
+       encodedPassenger = web3EthAbi.encodeParameters(['address'],[passenger]);
+       await config.flightSuretyApp.registerFlight(airlineName,flight,timestamp,encodedPassenger,{from:passenger,value:insuredAmount});
+  }
+  catch(e) {
+    //assert.equal(false,true,e.message);
+    reverted = true;
+  }
+  assert.equal(reverted,true, "Flight was registered and insured more than once!");
 });
 
 });
