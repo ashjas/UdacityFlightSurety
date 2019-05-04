@@ -38,20 +38,6 @@ contract FlightSuretyData {
     mapping(bytes32 => uint256) public airlineVotes;// hash of name+airline+msg.sender => for tracking who already voted.
     mapping(bytes32 => uint256) public airlineVotesCount;// hash of name+airline => for vote Counting
 
-    struct InsuredFlightCustomer
-    {
-        address customer;
-        uint256 insuranceAmount;
-    }
-    struct InsuredFlightCustomers
-    {
-        InsuredFlightCustomer[] flightCustomers;// index is derived from hash of InsuredCustomerIndexHash[customerAddress+flightName+timestamp] => index.
-        bool markRefund;
-    }
-    struct InsuredFlights
-    {
-        InsuredFlightCustomers[] insuredFlightDetails;// index is derived from hash of InsuredFlightIndexHash[flightName+timestamp] => index.
-    }
      struct FlightInsuredCustomers
     {
         address customer;
@@ -59,13 +45,11 @@ contract FlightSuretyData {
     }
     struct AirlineInsuredFlights
     {
-        //InsuredFlightCustomer[] flightCustomers;// index is derived from hash of InsuredCustomerIndexHash[customerAddress+flightName+timestamp] => index.
         mapping(bytes32 => FlightInsuredCustomers) flightInsuredCustomers;
         bool markRefund;
     }
     struct AllInsuredFlights
     {
-        //InsuredFlightCustomers[] insuredFlightDetails;// index is derived from hash of InsuredFlightIndexHash[flightName+timestamp] => index.
         mapping(bytes32 => AirlineInsuredFlights) airlineInsuredFlights;
     }
     mapping(address => AllInsuredFlights) private insuredLedger;// hash of airline address to mapping of insureeFunds.
@@ -74,26 +58,19 @@ contract FlightSuretyData {
     uint256 insuredFlightCustomerCounter = 0;
     mapping(bytes32 => uint256) private InsuredFlightIndexHash;// needs to be updated when new flight is inserted.
     mapping(bytes32 => uint256) private InsuredCustomerIndexHash;// needs to be update when new customer is added.
-    //address airline; address flightAddress; address customerAddress;uint256 timestamp;string flightName;
-    //InsuredFlights insuredFlights = insuredLedger[airline];
-    // uint256 flightIdx = InsuredFlightIndexHash[keccak256(abi.encodePacked(flightName,timestamp))];
-    // uint256 customerIdx = InsuredCustomerIndexHash[keccak256(abi.encodePacked(customerAddress,flightName,timestamp))];
-    // address customer = insuredFlights.insuredFlightDetails[flightIdx].flightCustomers[customerIdx].customer;
-    // uint256 customerInsuranceAmount = insuredFlights.insuredFlightDetails[flightIdx].flightCustomers[customerIdx].insuranceAmount;
     function addInsuredCustomer(address airline, string flightName,uint256 timestamp, address customerAddress)
                                 external
                                 payable
                                 requireIsOperational()
-                                //requireFlightNotInsured(airline,flightName,timestamp,customerAddress)
     {
+        //check for customer already insured..
         bytes32 airlineInsuredFlightsIdx = keccak256(abi.encodePacked(flightName,timestamp));
         bytes32 flightInsuredCustomersIdx = keccak256(abi.encodePacked(customerAddress,flightName,timestamp));
         FlightInsuredCustomers ifc = insuredLedger[airline].airlineInsuredFlights[airlineInsuredFlightsIdx].flightInsuredCustomers[flightInsuredCustomersIdx];
         require(ifc.customer != customerAddress,"One customer can purchase a single insurance only.");
-        uint256 payAmount = msg.value;
-        // InsuredFlightIndexHash[keccak256(abi.encodePacked(flightName,timestamp))] = insuredFlightCounter;
-        // InsuredCustomerIndexHash[keccak256(abi.encodePacked(customerAddress,flightName,timestamp))] = insuredFlightCustomerCounter;
         
+        //Add new insured customer.
+        uint256 payAmount = msg.value;
         FlightInsuredCustomers memory ifc1 = FlightInsuredCustomers({    
             customer : customerAddress,
             insuranceAmount: payAmount
@@ -101,13 +78,9 @@ contract FlightSuretyData {
         contractOwner.transfer(payAmount);
         insuredLedger[airline].airlineInsuredFlights[airlineInsuredFlightsIdx].flightInsuredCustomers[flightInsuredCustomersIdx] = ifc1;
         insuredLedger[airline].airlineInsuredFlights[airlineInsuredFlightsIdx].markRefund = false;
-        // insuredLedger[airline].insuredFlightDetails[insuredFlightCounter].flightCustomers[insuredFlightCustomerCounter] = ifc;
-        // insuredLedger[airline].insuredFlightDetails[insuredFlightCounter].markRefund = false;//set this to indicate, no refund has been initiated yet.
-        // insuredFlightCounter = insuredFlightCounter + 1;
-        // insuredFlightCustomerCounter = insuredFlightCustomerCounter + 1;
     }
     
-    uint256 private constant init_fund_price = 10 wei;
+    uint256 private constant init_fund_price = 10 ether;
     uint256 public airlineCount = 0;// count of airlines that are registered and funded.
     address[] public initialAirlines = new address[](0);
 
@@ -171,27 +144,6 @@ contract FlightSuretyData {
         }
     }
 
-    //modifier requireConsensus(string name,string airline_string)
-    modifier requireConsensus(string name)
-    {
-        if(this.getAirlineCount() >= REQUIRED_CONSENSUS_M)
-        {
-            //address airline = flightSuretyData.getAirlineAddressByName(name);
-            bytes32 voteCountHash = keccak256(abi.encodePacked(name,airlineName2AirlineAddress[name]));
-            uint256 votes = this.getAirlineVotesCount(voteCountHash);
-            require(votes >= this.getAirlineCount().div(REQUIRED_CONSENSUS_PERCENT),"Consensus of Airline votes not met.");
-        }
-        _;
-    }
-
-    modifier requireFlightNotInsured(address airline, string flightName,uint256 timestamp, address customerAddress)
-    {
-        bytes32 airlineInsuredFlightsIdx = keccak256(abi.encodePacked(flightName,timestamp));
-        bytes32 flightInsuredCustomersIdx = keccak256(abi.encodePacked(customerAddress,flightName,timestamp));
-        FlightInsuredCustomers ifc = insuredLedger[airline].airlineInsuredFlights[airlineInsuredFlightsIdx].flightInsuredCustomers[flightInsuredCustomersIdx];
-        require(ifc.customer != customerAddress,"One customer can purchase a single insurance only.");
-        _;
-    }
     /********************************************************************************************/
     /*                                       UTILITY FUNCTIONS                                  */
     /********************************************************************************************/
