@@ -103,16 +103,6 @@ contract FlightSuretyApp {
         _;
     }
 
-    // /**
-    // * @dev Modifier that requires that airline getting registered upto 4th is only registered by one of already registered airline.
-    // */
-    // modifier requireAirlineConsensus(string name, address airline)
-    // {
-    //     (bool success, uint256 votes) = registerAirline(name,airline);
-    //     require(success,"Duplicate votes for airline not allowed!");
-    //     require(votes > flightSuretyData.getAirlineCount().div(2),"50% registered and funded airline consensus not reached.");
-    //     _;
-    // }
     /********************************************************************************************/
     /*                                       CONSTRUCTOR                                        */
     /********************************************************************************************/
@@ -133,18 +123,11 @@ contract FlightSuretyApp {
         flightSuretyData.setConsensus_Perc(REQUIRED_CONSENSUS_PERCENT);
         flightSuretyData.registerAirline("AirIndia",msg.sender);
         flightSuretyData.setAppContractOwner(contractOwner);
-        //address firstAirline = "0x857c4e76174837b6feb808d1f2312b2b107a612b";// accounts[1]
-        //flightSuretyData.authorizeCaller(firstAirline);
-        //flightSuretyData.fund();
     }
 
-    // function fund(string name,string airline_address) requireIsOperational() requireConsensus(name,airline_address) external payable
-    // {
-    //     flightSuretyData.fund.value(msg.value)(name);
-    // }
     function fund(string name,address airline) requireIsOperational() requireConsensus(name,airline) external payable
     {
-        flightSuretyData.fund.value(msg.value)(name,airline);
+        flightSuretyData.fund.value(msg.value)(airline);
     }
     /********************************************************************************************/
     /*                                       UTILITY FUNCTIONS                                  */
@@ -176,12 +159,6 @@ contract FlightSuretyApp {
     /*                                     SMART CONTRACT FUNCTIONS                             */
     /********************************************************************************************/
 
-    function toString(address x) returns (string) {
-    bytes memory b = new bytes(20);
-    for (uint i = 0; i < 20; i++)
-        b[i] = byte(uint8(uint(x) / (2**(8*(19 - i)))));
-    return string(b);
-    }
    /**
     * @dev Add an airline to the registration queue
     *
@@ -210,19 +187,11 @@ contract FlightSuretyApp {
         }
         require(!duplicate,"Duplicate votes for airline not allowed!");
         uint256 votes = flightSuretyData.getAirlineVotesCount(voteCountHash);
-        //require(votes >= flightSuretyData.getAirlineCount().div(2) , "Consensus of 50% not achieved.");
+        //require(votes >= flightSuretyData.getAirlineCount().div(2) , "Consensus of 50% not achieved.");// This was a bug, revert here, reverses votes.
         if(votes >= flightSuretyData.getAirlineCount().div(2))
             flightSuretyData.registerAirline(name,airline);
     }
 
-    function getHash3(string name,string airline,string sender) public view returns (bytes32)
-    {
-        return keccak256(abi.encodePacked(name,airline,sender));
-    }
-    function getHash2(string name,string airline) public view returns (bytes32)
-    {
-        return keccak256(abi.encodePacked(name,airline));
-    }
    /**
     * @dev Register a future flight for insuring.
     *
@@ -491,6 +460,6 @@ contract FlightSuretyData{
     function buy(string airlineName,string flightName,uint256 timestamp,address customer,uint256 payAmount) external payable;
     function creditInsurees(address airline,string flightName,uint256 timestamp) external;
     function pay(string airlineName,string flightName,uint256 timestamp) external;
-    function fund(string name,address airline) public payable;
+    function fund(address airline) public payable;
     function setAppContractOwner(address) public;
 }

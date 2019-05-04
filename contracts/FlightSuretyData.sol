@@ -160,15 +160,10 @@ contract FlightSuretyData {
     /********************************************************************************************/
     function isAirlineRegistered(address airline) public view returns (bool)
     {
-        if(registeredAirlines[airline].isFunded)
-            return true;
-        return false;
+        return registeredAirlines[airline].isFunded;
     }
     function isAirlineQueued(address airline) public view returns (string)
     {
-        //if(registeredAirlines[airline].name == "AirIndia")
-          //  return true;
-        //return false;
         return registeredAirlines[airline].name;
     }
     function setAppContractOwner(address appAddress) public
@@ -180,7 +175,7 @@ contract FlightSuretyData {
         authorized[caller] = true;
     }
 
-    function getAirlineAddressByName(string name) public returns (address)
+    function getAirlineAddressByName(string name) public view returns (address)
     {
         return flightName2AirlineAddress[name];
     }
@@ -387,7 +382,7 @@ contract FlightSuretyData {
     *      resulting in insurance payouts, the contract should be self-sustaining
     *
     */   
-    function fund(string name,address airline)
+    function fund(address airline)
                   public
                   payable
                   requireIsOperational()
@@ -427,7 +422,7 @@ contract FlightSuretyData {
                             payable 
                             requireIsOperational()
     {
-        fund("",0);
+        fund(0);
     }
 
 
