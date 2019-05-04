@@ -387,38 +387,12 @@ contract FlightSuretyData {
     *      resulting in insurance payouts, the contract should be self-sustaining
     *
     */   
-    function fund(string name)
+    function fund(string name,address airline)
                   public
                   payable
                   requireIsOperational()
                   requireEnoughFunding()
-                  //requireConsensus(name)
     {
-        if(msg.sender == flightName2AirlineAddress[name])
-        {
-            require(false,"force failure..");
-        }
-        uint256 val = msg.value;
-        contractOwner.transfer(val);
-        registeredAirlines[msg.sender].isFunded = true;
-        registeredAirlines[msg.sender].funds = val;
-        if(airlineCount < 4){
-            initialAirlines.push(msg.sender);
-        }
-
-        airlineCount++;
-    }
-    function fund2(string name,address airline)
-                  public
-                  payable
-                  requireIsOperational()
-                  requireEnoughFunding()
-                  //requireConsensus(name)
-    {
-        // if(msg.sender == flightName2AirlineAddress[name])
-        // {
-        //     require(false,"force failure..");
-        // }
         uint256 val = msg.value;
         contractOwner.transfer(val);
         registeredAirlines[airline].isFunded = true;
@@ -453,7 +427,7 @@ contract FlightSuretyData {
                             payable 
                             requireIsOperational()
     {
-        fund("");
+        fund("",0);
     }
 
 

@@ -91,12 +91,12 @@ contract FlightSuretyApp {
         }
     }
 
-    modifier requireConsensus(string name,string airline_string)
+    modifier requireConsensus(string name,address airline)
     {
         if(flightSuretyData.getAirlineCount() >= REQUIRED_CONSENSUS_M)
         {
             //address airline = flightSuretyData.getAirlineAddressByName(name);
-            bytes32 voteCountHash = keccak256(abi.encodePacked(name,airline_string));
+            bytes32 voteCountHash = keccak256(abi.encodePacked(name,airline));
             uint256 votes = flightSuretyData.getAirlineVotesCount(voteCountHash);
             require(votes >= flightSuretyData.getAirlineCount().div(2),"Consensus of 50% Airline votes not met.");
         }
@@ -138,13 +138,13 @@ contract FlightSuretyApp {
         //flightSuretyData.fund();
     }
 
-    function fund(string name,string airline_address) requireIsOperational() requireConsensus(name,airline_address) external payable
+    // function fund(string name,string airline_address) requireIsOperational() requireConsensus(name,airline_address) external payable
+    // {
+    //     flightSuretyData.fund.value(msg.value)(name);
+    // }
+    function fund(string name,address airline) requireIsOperational() requireConsensus(name,airline) external payable
     {
-        flightSuretyData.fund.value(msg.value)(name);
-    }
-    function fund2(string name,address airline) requireIsOperational() /*requireConsensus(name,airline_address)*/ external payable
-    {
-        flightSuretyData.fund2.value(msg.value)(name,airline);
+        flightSuretyData.fund.value(msg.value)(name,airline);
     }
     /********************************************************************************************/
     /*                                       UTILITY FUNCTIONS                                  */
@@ -190,8 +190,7 @@ contract FlightSuretyApp {
                             (   
                                 string name,
                                 address airline,
-                                string airline_string,
-                                string sender_string
+                                address sender
                             )
                             requireIsOperational()
                             requireRegisterByExisting(name,airline)
@@ -200,8 +199,8 @@ contract FlightSuretyApp {
     {
         //code for multi party consensus.
         // if here, 4 airlines have already been registered.
-        bytes32 airlineVotedKey = keccak256(abi.encodePacked(name,airline_string,sender_string));
-        bytes32 voteCountHash = keccak256(abi.encodePacked(name,airline_string));
+        bytes32 airlineVotedKey = keccak256(abi.encodePacked(name,airline,sender));
+        bytes32 voteCountHash = keccak256(abi.encodePacked(name,airline));
         bool duplicate = true;// this means, already voted address tried to registerAirline again.
         if(flightSuretyData.getAirlineVotes(airlineVotedKey) == 0)//this ensures same airline does not vote for another airline again.
         {
@@ -492,7 +491,6 @@ contract FlightSuretyData{
     function buy(string airlineName,string flightName,uint256 timestamp,address customer,uint256 payAmount) external payable;
     function creditInsurees(address airline,string flightName,uint256 timestamp) external;
     function pay(string airlineName,string flightName,uint256 timestamp) external;
-    function fund(string name) public payable;
-    function fund2(string name,address airline) public payable;
+    function fund(string name,address airline) public payable;
     function setAppContractOwner(address) public;
 }
