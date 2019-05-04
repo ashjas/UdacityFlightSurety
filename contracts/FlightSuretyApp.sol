@@ -142,6 +142,10 @@ contract FlightSuretyApp {
     {
         flightSuretyData.fund.value(msg.value)(name);
     }
+    function fund2(string name,address airline) requireIsOperational() /*requireConsensus(name,airline_address)*/ external payable
+    {
+        flightSuretyData.fund2.value(msg.value)(name,airline);
+    }
     /********************************************************************************************/
     /*                                       UTILITY FUNCTIONS                                  */
     /********************************************************************************************/
@@ -489,5 +493,6 @@ contract FlightSuretyData{
     function creditInsurees(address airline,string flightName,uint256 timestamp) external;
     function pay(string airlineName,string flightName,uint256 timestamp) external;
     function fund(string name) public payable;
+    function fund2(string name,address airline) public payable;
     function setAppContractOwner(address) public;
 }

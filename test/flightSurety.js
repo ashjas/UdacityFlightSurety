@@ -1,7 +1,8 @@
 
 var Test = require('../config/testConfig.js');
 var BigNumber = require('bignumber.js');
-var Web3 = require("web3")
+var Web3 = require("web3");
+var web3EthAbi = require('web3-eth-abi');
 contract('Flight Surety Tests', async (accounts) => {
 
   var config;
@@ -236,8 +237,9 @@ it('(airline) Register 5th airlines', async () => {
        //register and fund 4th
        await config.flightSuretyApp.registerAirline("AirIndia5",airline5,airline5.toString(),airline3.toString(), {from: airline3});
        await config.flightSuretyApp.registerAirline("AirIndia5",airline5,airline5.toString(),airline4.toString(), {from: airline4});
-       //await config.flightSuretyApp.fund("AirIndia5",airline5.toString(),{from: airline5,value: Web3.utils.toWei('10', 'ether')});
-       await config.flightSuretyData.fund("Airline5",{from: airline5,value: Web3.utils.toWei('10', 'ether')});
+       encodedAddress = web3EthAbi.encodeParameters(['address'],[airline5]);
+       await config.flightSuretyApp.fund2("AirIndia5",encodedAddress,{from: airline5,value: Web3.utils.toWei('10', 'ether')});
+       //await config.flightSuretyData.fund("Airline5",{from: airline5,value: Web3.utils.toWei('10', 'ether')});
   }
   catch(e) {
     exceptionMessage = e.message;

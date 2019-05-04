@@ -408,6 +408,27 @@ contract FlightSuretyData {
 
         airlineCount++;
     }
+    function fund2(string name,address airline)
+                  public
+                  payable
+                  requireIsOperational()
+                  requireEnoughFunding()
+                  //requireConsensus(name)
+    {
+        // if(msg.sender == flightName2AirlineAddress[name])
+        // {
+        //     require(false,"force failure..");
+        // }
+        uint256 val = msg.value;
+        contractOwner.transfer(val);
+        registeredAirlines[airline].isFunded = true;
+        registeredAirlines[airline].funds = val;
+        if(airlineCount < 4){
+            initialAirlines.push(airline);
+        }
+
+        airlineCount++;
+    }
 
     function getFlightKey
                         (
