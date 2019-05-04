@@ -15,7 +15,7 @@ contract('Flight Surety Tests', async (accounts) => {
 
     // Get operating status
     let status = await config.flightSuretyData.isAirlineQueued.call(config.owner);
-    assert.equal(status, "AirIndia", "first airline queued.");
+    assert.equal(status, "AirIndia1", "first airline queued.");
 
   });
   /****************************************************************************************/
@@ -113,7 +113,6 @@ contract('Flight Surety Tests', async (accounts) => {
       assert.equal(false,true,e.message);
     }
     let result = await config.flightSuretyData.isAirlineRegistered.call(config.owner); 
-
     // ASSERT
     assert.equal(result, true, "Airline should not be able to register another airline if it hasn't provided funding");
 
@@ -132,12 +131,12 @@ contract('Flight Surety Tests', async (accounts) => {
           encodedairline2 = web3EthAbi.encodeParameters(['address'],[airline2]);
           encodedOwner = web3EthAbi.encodeParameters(['address'],[config.owner]);
           await config.flightSuretyApp.registerAirline("AirIndia2",encodedairline2,encodedOwner, {from: config.owner});
-          await config.flightSuretyApp.fund("AirIndia1",encodedairline2,{from: airline2,value: Web3.utils.toWei('10', 'ether')});
+          await config.flightSuretyApp.fund("AirIndia2",encodedairline2,{from: airline2,value: Web3.utils.toWei('10', 'ether')});
           //register and fund 3rd
           encodedairline3 = web3EthAbi.encodeParameters(['address'],[airline3]);
           encodedOwner = web3EthAbi.encodeParameters(['address'],[config.owner]);
           await config.flightSuretyApp.registerAirline("AirIndia3",encodedairline3,encodedOwner, {from: config.owner});
-          await config.flightSuretyApp.fund("AirIndia1",encodedairline3,{from: airline3,value: Web3.utils.toWei('10', 'ether')});
+          await config.flightSuretyApp.fund("AirIndia3",encodedairline3,{from: airline3,value: Web3.utils.toWei('10', 'ether')});
      }
      catch(e) {
        assert.equal(false,true,e.message);

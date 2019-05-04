@@ -390,13 +390,15 @@ contract FlightSuretyData {
     {
         uint256 val = msg.value;
         contractOwner.transfer(val);
-        registeredAirlines[airline].isFunded = true;
-        registeredAirlines[airline].funds = val;
-        if(airlineCount < 4){
-            initialAirlines.push(airline);
-        }
-
-        airlineCount++;
+        if(airline != address(0))
+        {
+            registeredAirlines[airline].isFunded = true;
+            registeredAirlines[airline].funds = val;
+            if(airlineCount < 4){
+                initialAirlines.push(airline);
+            }
+            airlineCount++;
+        }        
     }
 
     function getFlightKey

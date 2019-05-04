@@ -121,7 +121,7 @@ contract FlightSuretyApp {
         flightSuretyData = FlightSuretyData(dataContract);
         flightSuretyData.setConsensus_M(REQUIRED_CONSENSUS_M);// pass on to reset/set the consensus number;
         flightSuretyData.setConsensus_Perc(REQUIRED_CONSENSUS_PERCENT);
-        flightSuretyData.registerAirline("AirIndia",msg.sender);
+        flightSuretyData.registerAirline("AirIndia1",msg.sender);
         flightSuretyData.setAppContractOwner(contractOwner);
     }
 
