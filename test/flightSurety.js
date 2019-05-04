@@ -2,7 +2,6 @@
 var Test = require('../config/testConfig.js');
 var BigNumber = require('bignumber.js');
 var Web3 = require("web3");
-var web3EthAbi = require('web3-eth-abi');
 contract('Flight Surety Tests', async (accounts) => {
 
   var config;
@@ -106,8 +105,7 @@ contract('Flight Surety Tests', async (accounts) => {
 
     // ACT
     try {
-          encodedAddress = web3EthAbi.encodeParameters(['address'],[config.owner]);
-          await config.flightSuretyApp.fund("AirIndia1",encodedAddress,{from: config.owner,value: Web3.utils.toWei('10', 'ether')});
+          await config.flightSuretyApp.fund("AirIndia1",config.owner,{from: config.owner,value: Web3.utils.toWei('10', 'ether')});
     }
     catch(e) {
       assert.equal(false,true,e.message);
@@ -128,15 +126,11 @@ contract('Flight Surety Tests', async (accounts) => {
      // ACT
      try {
           //register and fund 2nd
-          encodedairline2 = web3EthAbi.encodeParameters(['address'],[airline2]);
-          encodedOwner = web3EthAbi.encodeParameters(['address'],[config.owner]);
-          await config.flightSuretyApp.registerAirline("AirIndia2",encodedairline2,encodedOwner, {from: config.owner});
-          await config.flightSuretyApp.fund("AirIndia2",encodedairline2,{from: airline2,value: Web3.utils.toWei('10', 'ether')});
+          await config.flightSuretyApp.registerAirline("AirIndia2",airline2,config.owner, {from: config.owner});
+          await config.flightSuretyApp.fund("AirIndia2",airline2,{from: airline2,value: Web3.utils.toWei('10', 'ether')});
           //register and fund 3rd
-          encodedairline3 = web3EthAbi.encodeParameters(['address'],[airline3]);
-          encodedOwner = web3EthAbi.encodeParameters(['address'],[config.owner]);
-          await config.flightSuretyApp.registerAirline("AirIndia3",encodedairline3,encodedOwner, {from: config.owner});
-          await config.flightSuretyApp.fund("AirIndia3",encodedairline3,{from: airline3,value: Web3.utils.toWei('10', 'ether')});
+          await config.flightSuretyApp.registerAirline("AirIndia3",airline3,config.owner, {from: config.owner});
+          await config.flightSuretyApp.fund("AirIndia3",airline3,{from: airline3,value: Web3.utils.toWei('10', 'ether')});
      }
      catch(e) {
        assert.equal(false,true,e.message);
@@ -157,11 +151,9 @@ contract('Flight Surety Tests', async (accounts) => {
     // ACT
     try {
          //register and fund 5th.. should error out..
-         encodedairline5 = web3EthAbi.encodeParameters(['address'],[airline5]);
-         encodedairline4 = web3EthAbi.encodeParameters(['address'],[airline4]);
-         result = await config.flightSuretyApp.registerAirline("AirIndia5",encodedairline5,encodedairline4, {from: airline4});
+         result = await config.flightSuretyApp.registerAirline("AirIndia5",airline5,airline4, {from: airline4});
          if(result)
-          await config.flightSuretyApp.fund("AirIndia5",encodedairline5,{from: airline5,value: Web3.utils.toWei('10', 'ether')});
+          await config.flightSuretyApp.fund("AirIndia5",airline5,{from: airline5,value: Web3.utils.toWei('10', 'ether')});
     }
     catch(e) {
       reverted = true;
@@ -178,10 +170,8 @@ contract('Flight Surety Tests', async (accounts) => {
   // ACT
   try {
        //register and fund 4th
-       encodedairline4 = web3EthAbi.encodeParameters(['address'],[airline4]);
-       encodedairline3 = web3EthAbi.encodeParameters(['address'],[airline3]);
-       await config.flightSuretyApp.registerAirline("AirIndia4",encodedairline4,encodedairline3, {from: airline3});
-       await config.flightSuretyApp.fund("AirIndia4",encodedairline4,{from: airline4,value: Web3.utils.toWei('10', 'ether')});
+       await config.flightSuretyApp.registerAirline("AirIndia4",airline4,airline3, {from: airline3});
+       await config.flightSuretyApp.fund("AirIndia4",airline4,{from: airline4,value: Web3.utils.toWei('10', 'ether')});
   }
   catch(e) {
     assert.equal(false,true,e.message);
@@ -216,12 +206,9 @@ it('(airline) Register 5th airlines', async () => {
   let exceptionMessage = "";
   try {
        //register and fund 4th
-       encodedairline3 = web3EthAbi.encodeParameters(['address'],[airline3]);
-       encodedairline4 = web3EthAbi.encodeParameters(['address'],[airline4]);
-       encodedairline5 = web3EthAbi.encodeParameters(['address'],[airline5]);
-       await config.flightSuretyApp.registerAirline("AirIndia5",encodedairline5,encodedairline3, {from: airline3});
-       await config.flightSuretyApp.registerAirline("AirIndia5",encodedairline5,encodedairline4, {from: airline4});
-       await config.flightSuretyApp.fund("AirIndia5",encodedairline5,{from: airline5,value: Web3.utils.toWei('10', 'ether')});
+       await config.flightSuretyApp.registerAirline("AirIndia5",airline5,airline3, {from: airline3});
+       await config.flightSuretyApp.registerAirline("AirIndia5",airline5,airline4, {from: airline4});
+       await config.flightSuretyApp.fund("AirIndia5",airline5,{from: airline5,value: Web3.utils.toWei('10', 'ether')});
   }
   catch(e) {
     exceptionMessage = e.message;
@@ -248,10 +235,8 @@ it('(airline) Duplicate voting is not allowed.', async () => {
   // ACT
   try {
        //register and fund 4th
-       encodedairline5 = web3EthAbi.encodeParameters(['address'],[airline5]);
-       encodedairline6 = web3EthAbi.encodeParameters(['address'],[airline6]);
-       await config.flightSuretyApp.registerAirline("AirIndia6",encodedairline6,encodedairline3, {from: airline5});// first vote by airline5
-       await config.flightSuretyApp.registerAirline("AirIndia6",encodedairline6,encodedairline3, {from: airline5});// second vote by airline5
+       await config.flightSuretyApp.registerAirline("AirIndia6",airline6,airline5, {from: airline5});// first vote by airline5
+       await config.flightSuretyApp.registerAirline("AirIndia6",airline6,airline5, {from: airline5});// second vote by airline5
   }
   catch(e) {
     //assert.equal(false,true,e.message);
@@ -272,8 +257,7 @@ it('(insurance) Buy Insurance', async () => {
   // ACT
   try {
        //registerFlight
-       encodedPassenger = web3EthAbi.encodeParameters(['address'],[passenger]);
-       await config.flightSuretyApp.registerFlight(airlineName,flight,timestamp,encodedPassenger,{from:passenger,value:insuredAmount});
+       await config.flightSuretyApp.registerFlight(airlineName,flight,timestamp,passenger,{from:passenger,value:insuredAmount});
   }
   catch(e) {
     assert.equal(false,true,e.message);
@@ -294,8 +278,7 @@ it('(insurance) Buy Insurance for a flight more than once.', async () => {
   // ACT
   try {
        //registerFlight
-       encodedPassenger = web3EthAbi.encodeParameters(['address'],[passenger]);
-       await config.flightSuretyApp.registerFlight(airlineName,flight,timestamp,encodedPassenger,{from:passenger,value:insuredAmount});
+       await config.flightSuretyApp.registerFlight(airlineName,flight,timestamp,passenger,{from:passenger,value:insuredAmount});
   }
   catch(e) {
     //assert.equal(false,true,e.message);
