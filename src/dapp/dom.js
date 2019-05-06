@@ -4,6 +4,7 @@ export default class DOM {
 
     static a = (...args) => DOM.makeElement(`a`, ...args);
     static button = (...args) => DOM.makeElement(`button`, ...args);
+    static input = (...args) => DOM.makeElement(`input`, ...args);
     static div = (...args) => DOM.makeElement(`div`, ...args);
     static h1 = (...args) => DOM.makeElement(`h1`, ...args);
     static h2 = (...args) => DOM.makeElement(`h2`, ...args);

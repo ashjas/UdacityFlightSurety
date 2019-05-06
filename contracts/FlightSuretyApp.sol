@@ -87,7 +87,7 @@ contract FlightSuretyApp {
         }
         else
         {
-            _;    
+            _;
         }
     }
 
@@ -114,8 +114,8 @@ contract FlightSuretyApp {
     constructor
                                 (
                                     address dataContract
-                                ) 
-                                public 
+                                )
+                                public
     {
         contractOwner = msg.sender;
         flightSuretyData = FlightSuretyData(dataContract);
@@ -133,10 +133,10 @@ contract FlightSuretyApp {
     /*                                       UTILITY FUNCTIONS                                  */
     /********************************************************************************************/
 
-    function isOperational() 
-                            public 
+    function isOperational()
+                            public
                             view
-                            returns(bool) 
+                            returns(bool)
     {
         return flightSuretyData.isOperational();  // Modify to call data contract's status
     }
@@ -145,11 +145,11 @@ contract FlightSuretyApp {
     * @dev Sets contract operations on/off
     *
     * When operational mode is disabled, all write transactions except for this one will fail
-    */    
+    */
     function setOperatingStatus
                             (
                                 bool mode
-                            ) 
+                            )
                             requireContractOwner()
                             internal
     {
@@ -162,9 +162,9 @@ contract FlightSuretyApp {
    /**
     * @dev Add an airline to the registration queue
     *
-    */   
+    */
     function registerAirline
-                            (   
+                            (
                                 string name,
                                 address airline,
                                 address sender
@@ -172,7 +172,7 @@ contract FlightSuretyApp {
                             requireIsOperational()
                             requireRegisterByExisting(name,airline)
                             public
-                            //returns(bool success)    
+                            //returns(bool success)
     {
         //code for multi party consensus.
         // if here, 4 airlines have already been registered.
@@ -195,7 +195,7 @@ contract FlightSuretyApp {
    /**
     * @dev Register a future flight for insuring.
     *
-    */  
+    */
     function registerFlight
                                 (
                                     string airlineName,
@@ -220,7 +220,7 @@ contract FlightSuretyApp {
    /**
     * @dev Called after oracle has updated flight status
     *
-    */  
+    */
     function processFlightStatus
                                 (
                                     address airline,
@@ -234,13 +234,14 @@ contract FlightSuretyApp {
         flightSuretyData.processFlightStatus(airline,flightName,timestamp,statusCode);
         if(statusCode == STATUS_CODE_LATE_AIRLINE)
         {
-            flightSuretyData.creditInsurees(airline,flightName, timestamp);
+            string memory airlineName = flightSuretyData.getAirlineNameByAddress(airline);//TODO why memory and not storage?
+            flightSuretyData.creditInsurees(airlineName,flightName, timestamp);
         }
     }
 
-    function withdrawOnDelay(string memory airlineName,string memory flightName,uint256 timestamp) requireIsOperational() public payable
+    function withdrawOnDelay(string memory airlineName,string memory flightName,uint256 timestamp,address customer) requireIsOperational() public payable
     {
-        flightSuretyData.pay(airlineName,flightName,timestamp);
+        flightSuretyData.pay(airlineName,flightName,timestamp,customer);
     }
 
     // Generate a request for oracles to fetch flight information
@@ -248,7 +249,7 @@ contract FlightSuretyApp {
                         (
                             address airline,
                             string flight,
-                            uint256 timestamp                            
+                            uint256 timestamp
                         )
                         requireIsOperational()
                         external
@@ -263,13 +264,16 @@ contract FlightSuretyApp {
                                             });
 
         emit OracleRequest(index, airline, flight, timestamp);
-    } 
+    }
 
-
+    function insureeBalance() external requireIsOperational() returns (uint256)
+    {
+        return flightSuretyData.insureeBalance();
+    }
 // region ORACLE MANAGEMENT
 
     // Incremented to add pseudo-randomness at various points
-    uint8 private nonce = 0;    
+    uint8 private nonce = 0;
 
     // Fee to be paid when registering oracle
     uint256 public constant REGISTRATION_FEE = 1 ether;
@@ -280,7 +284,7 @@ contract FlightSuretyApp {
 
     struct Oracle {
         bool isRegistered;
-        uint8[3] indexes;        
+        uint8[3] indexes;
     }
 
     // Track all registered oracles
@@ -314,9 +318,9 @@ contract FlightSuretyApp {
     function registerOracle
                             (
                             )
-                            requireIsOperational()
                             external
                             payable
+                            requireIsOperational()
     {
         // Require registration fee
         require(msg.value >= REGISTRATION_FEE, "Registration fee is required");
@@ -332,8 +336,8 @@ contract FlightSuretyApp {
     function getMyIndexes
                             (
                             )
-                            view
                             external
+                            view
                             requireIsOperational()
                             returns(uint8[3])
     {
@@ -357,8 +361,8 @@ contract FlightSuretyApp {
                             uint256 timestamp,
                             uint8 statusCode
                         )
-                        requireIsOperational()
                         external
+                        requireIsOperational()
     {
         require((oracles[msg.sender].indexes[0] == index) || (oracles[msg.sender].indexes[1] == index) || (oracles[msg.sender].indexes[2] == index), "Index does not match oracle request");
 
@@ -390,15 +394,15 @@ contract FlightSuretyApp {
                         requireIsOperational()
                         internal
                         view
-                        returns(bytes32) 
+                        returns(bytes32)
     {
         return keccak256(abi.encodePacked(airline, flight, timestamp));
     }
 
     // Returns array of three non-duplicating integers from 0-9
     function generateIndexes
-                            (                       
-                                address account         
+                            (
+                                address account
                             )
                             requireIsOperational()
                             internal
@@ -461,8 +465,10 @@ contract FlightSuretyData{
     function registerFlight(string airlineName,string flight, uint256 time) external;
     function processFlightStatus(address airline,string flight,uint256 timestamp,uint8 statusCode) external;
     function buy(string airlineName,string flightName,uint256 timestamp,address customer) external payable;
-    function creditInsurees(address airline,string flightName,uint256 timestamp) external;
-    function pay(string airlineName,string flightName,uint256 timestamp) external;
+    function creditInsurees(string airlineName,string flightName,uint256 timestamp) external;
+    function pay(string airlineName,string flightName,uint256 timestamp,address customer) external;
     function fund(address airline) public payable;
     function setAppContractOwner(address) public;
+    function insureeBalance() external returns (uint256);
+    function getAirlineNameByAddress(address airline) public view returns (string);
 }

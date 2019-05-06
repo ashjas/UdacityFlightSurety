@@ -13,7 +13,7 @@ contract('Flight Surety Tests', async (accounts) => {
   it(`First airline queued`, async function () {
 
     // Get operating status
-    let status = await config.flightSuretyData.isAirlineQueued.call(config.owner);
+    let status = await config.flightSuretyData.getAirlineNameByAddress.call(config.owner);
     assert.equal(status, "AirIndia1", "first airline queued.");
 
   });
@@ -285,6 +285,27 @@ it('(insurance) Buy Insurance for a flight more than once.', async () => {
     reverted = true;
   }
   assert.equal(reverted,true, "Flight was registered and insured more than once!");
+});
+
+it('(insurance) Credit customer of refund amount', async () => {
+    
+  // ARRANGE
+  let passenger = accounts[6];
+  let airlineName = "AirIndia6";
+  let timestamp = 0;
+  let flight = "AIR007";
+  let reverted = false;
+  // ACT
+  try {
+       //registerFlight
+       await config.flightSuretyData.creditInsurees(airlineName,flight,timestamp,{from:config.owner});
+       await config.flightSuretyApp.withdrawOnDelay(airlineName,flight,timestamp,passenger);
+  }
+  catch(e) {
+    assert.equal(false,true,e.message);
+    reverted = true;
+  }
+  assert.equal(reverted,false, "Credit to customer failed!");
 });
 
 });

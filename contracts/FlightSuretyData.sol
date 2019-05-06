@@ -42,6 +42,7 @@ contract FlightSuretyData {
     {
         address customer;
         uint256 insuranceAmount;
+        uint256 refundAmount;
     }
     struct AirlineInsuredFlights
     {
@@ -52,12 +53,9 @@ contract FlightSuretyData {
     {
         mapping(bytes32 => AirlineInsuredFlights) airlineInsuredFlights;
     }
+    mapping(address => FlightInsuredCustomers) insureeList;
     mapping(address => AllInsuredFlights) private insuredLedger;// hash of airline address to mapping of insureeFunds.
 
-    uint256 insuredFlightCounter = 0;
-    uint256 insuredFlightCustomerCounter = 0;
-    mapping(bytes32 => uint256) private InsuredFlightIndexHash;// needs to be updated when new flight is inserted.
-    mapping(bytes32 => uint256) private InsuredCustomerIndexHash;// needs to be update when new customer is added.
     function addInsuredCustomer(address airline, string flightName,uint256 timestamp, address customerAddress)
                                 external
                                 payable
@@ -71,13 +69,15 @@ contract FlightSuretyData {
         
         //Add new insured customer.
         uint256 payAmount = msg.value;
-        FlightInsuredCustomers memory ifc1 = FlightInsuredCustomers({    
+        FlightInsuredCustomers memory ifc1 = FlightInsuredCustomers({
             customer : customerAddress,
-            insuranceAmount: payAmount
+            insuranceAmount: payAmount,
+            refundAmount : 0
         });
         contractOwner.transfer(payAmount);
         insuredLedger[airline].airlineInsuredFlights[airlineInsuredFlightsIdx].flightInsuredCustomers[flightInsuredCustomersIdx] = ifc1;
         insuredLedger[airline].airlineInsuredFlights[airlineInsuredFlightsIdx].markRefund = false;
+        insureeList[customerAddress] = ifc1;
     }
     
     uint256 private constant init_fund_price = 10 ether;
@@ -151,7 +151,7 @@ contract FlightSuretyData {
     {
         return registeredAirlines[airline].isFunded;
     }
-    function isAirlineQueued(address airline) public view returns (string)
+    function getAirlineNameByAddress(address airline) public view returns (string)
     {
         return registeredAirlines[airline].name;
     }
@@ -220,7 +220,10 @@ contract FlightSuretyData {
         bytes32 key = keccak256(abi.encodePacked(airlineName2AirlineAddress[airlineName], flight, timestamp));
         return flights[key].isRegistered;
     }
-
+    function insureeBalance() external requireIsOperational() returns (uint256)
+    {
+        return ;
+    }
     // this function registers a flight in the data contract.
     function registerFlight(string airlineName,string flight, uint256 time) requireIsOperational() external
     {
@@ -333,14 +336,16 @@ contract FlightSuretyData {
     */
     function creditInsurees
                                 (
-                                    address airline,
+                                    string airlineName,
                                     string flightName,
                                     uint256 timestamp
                                 )
                                 requireIsOperational()
                                 external
     {
+        require(appContractOwner == msg.sender,"Caller not authorized");
         bytes32 delayedFlightIdx = keccak256(abi.encodePacked(flightName,timestamp));
+        address airline = airlineName2AirlineAddress[airlineName];
         insuredLedger[airline].airlineInsuredFlights[delayedFlightIdx].markRefund = true;
     }
     
@@ -353,12 +358,12 @@ contract FlightSuretyData {
                             (
                                 string airlineName,
                                 string flightName,
-                                uint256 timestamp
+                                uint256 timestamp,
+                                address customer
                             )
                             requireIsOperational()
                             external payable
     {
-        address customer = msg.sender;
         bytes32 delayedFlightIdx = keccak256(abi.encodePacked(flightName,timestamp));
         bytes32 customerIdx = keccak256(abi.encodePacked(customer,flightName,timestamp));
         address airline = airlineName2AirlineAddress[airlineName];
