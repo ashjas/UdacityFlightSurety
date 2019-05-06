@@ -1,5 +1,4 @@
 pragma solidity ^0.4.24;
-pragma experimental ABIEncoderV2;
 
 import "../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol";
 
@@ -64,7 +63,7 @@ contract FlightSuretyData {
         //check for customer already insured..
         bytes32 airlineInsuredFlightsIdx = keccak256(abi.encodePacked(flightName,timestamp));
         bytes32 flightInsuredCustomersIdx = keccak256(abi.encodePacked(customerAddress,flightName,timestamp));
-        FlightInsuredCustomers ifc = insuredLedger[airline].airlineInsuredFlights[airlineInsuredFlightsIdx].flightInsuredCustomers[flightInsuredCustomersIdx];
+        FlightInsuredCustomers storage ifc = insuredLedger[airline].airlineInsuredFlights[airlineInsuredFlightsIdx].flightInsuredCustomers[flightInsuredCustomersIdx];
         require(ifc.customer != customerAddress,"One customer can purchase a single insurance only.");
         
         //Add new insured customer.
@@ -209,21 +208,12 @@ contract FlightSuretyData {
         return registeredFlight[user];
     }
 
-    function getFlight(string flight, string airlineName, uint256 timestamp) requireIsOperational() external view returns (Flight)
-    {
-        bytes32 key = keccak256(abi.encodePacked(airlineName2AirlineAddress[airlineName], flight, timestamp));
-        return flights[key];
-    }
-
     function isFlightRegistered(string flight, string airlineName, uint256 timestamp) requireIsOperational() external view returns (bool)
     {
         bytes32 key = keccak256(abi.encodePacked(airlineName2AirlineAddress[airlineName], flight, timestamp));
         return flights[key].isRegistered;
     }
-    function insureeBalance() external requireIsOperational() returns (uint256)
-    {
-        return ;
-    }
+
     // this function registers a flight in the data contract.
     function registerFlight(string airlineName,string flight, uint256 time) requireIsOperational() external
     {

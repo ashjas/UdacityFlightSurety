@@ -266,10 +266,6 @@ contract FlightSuretyApp {
         emit OracleRequest(index, airline, flight, timestamp);
     }
 
-    function insureeBalance() external requireIsOperational() returns (uint256)
-    {
-        return flightSuretyData.insureeBalance();
-    }
 // region ORACLE MANAGEMENT
 
     // Incremented to add pseudo-randomness at various points
@@ -469,6 +465,5 @@ contract FlightSuretyData{
     function pay(string airlineName,string flightName,uint256 timestamp,address customer) external;
     function fund(address airline) public payable;
     function setAppContractOwner(address) public;
-    function insureeBalance() external returns (uint256);
     function getAirlineNameByAddress(address airline) public view returns (string);
 }
