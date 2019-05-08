@@ -53,7 +53,7 @@ import './flightsurety.css';
         // Read transaction
         contract.isOperational((err, res) => {
             console.log(err,res);
-            display('Operational Status', 'Check if contract is operational', [ { label: 'Operational Status', err: err, value: res} ]);
+            displayOperationalStatus([ { label: 'Operational Status', err: err, value: res} ]);
             displayFlightplan( allFlights, fetchFlightStatusCallback, registerFlightCallback);
         });
     
@@ -105,7 +105,7 @@ function displayFlightplan(flights, fetchFlightStatusCallback, registerFlightCal
     sectionFlightPlan.appendChild(DOM.h2("Flightplan"));
 
     if(flights !== null){
-        sectionFlightPlan.appendChild(DOM.h5("Currently available flights"));
+        sectionFlightPlan.appendChild(DOM.h5("Available flights"));
 
         flights.map((flight) => {
             let row_id = 'row_' + flight.flightName;
@@ -207,7 +207,21 @@ function displaySubmitOracle(title, description, results) {
     displayDiv.append(section);
 
 }
+function displayOperationalStatus(status) {
+    let displayDiv = DOM.elid("display-operational");
+    displayDiv.innerHTML = "";
 
+    let sectionOperationalStatus = DOM.section();
+    sectionOperationalStatus.appendChild(DOM.h4('Operational Status'));
+    sectionOperationalStatus.appendChild(DOM.h5('Check if contract is operational'));
+    status.map((result) => {
+        let row = sectionOperationalStatus.appendChild(DOM.div({className:'row'}));
+        row.appendChild(DOM.div({className: 'col-sm-4 field'}, result.label));
+        row.appendChild(DOM.div({className: 'col-sm-8 field-value'}, result.error ? String(result.error) : String(result.value)));
+        sectionOperationalStatus.appendChild(row);
+    })
+    displayDiv.append(sectionOperationalStatus);
+}
 
 
 
